@@ -258,7 +258,7 @@ client.on('interactionCreate', async interaction => {
         )
         .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
         .setTimestamp();
-
+        
       await interaction.editReply({ embeds: [embed] });
     }
     
@@ -285,7 +285,7 @@ client.on('interactionCreate', async interaction => {
         { name: 'Reason', value: reason }
       )
       .setTimestamp();
-    await sendModLog(interaction.guild, embed);
+      await sendModLog(interaction.guild, embed);
     }
 
     // === /unban ===
