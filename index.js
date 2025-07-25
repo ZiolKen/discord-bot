@@ -89,20 +89,16 @@ const commands = [
       option.setName('userid').setDescription('User ID to unban').setRequired(true)),
 
   new SlashCommandBuilder()
-  .setName('mute')
-  .setDescription('Mute a user')
-  .addUserOption(option =>
-    option.setName('target').setDescription('User to mute').setRequired(true))
-  .addStringOption(option =>
-    option.setName('duration').setDescription('Duration (e.g. 10m, 1h)').setRequired(false))
-  .addStringOption(option =>
-    option.setName('reason').setDescription('Reason for mute').setRequired(false)),
+    .setName('mute')
+    .setDescription('Mute a user')
+    .addUserOption(opt => opt.setName('target').setDescription('User to mute').setRequired(true))
+    .addStringOption(opt => opt.setName('duration').setDescription('Mute duration (e.g. 10m, 2h)').setRequired(false))
+    .addStringOption(opt => opt.setName('reason').setDescription('Reason').setRequired(false)),
 
   new SlashCommandBuilder()
     .setName('unmute')
     .setDescription('Unmute a user')
-    .addUserOption(option =>
-      option.setName('target').setDescription('User to unmute').setRequired(true)),
+    .addUserOption(opt => opt.setName('target').setDescription('User to unmute').setRequired(true)),
 ].map(cmd => cmd.toJSON());
 
 
