@@ -369,7 +369,7 @@ client.on('interactionCreate', async interaction => {
               { name: 'Reason', value: reason }
             )
             .setTimestamp();
-          await sendModLog(interaction.guild, embed);
+            await sendModLog(interaction.guild, embed);
           return;
         } catch (err) {
           console.warn('⚠️ Timeout failed:', err.message);
