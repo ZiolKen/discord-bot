@@ -2,7 +2,7 @@ const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, EmbedBuild
 require('dotenv').config();
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-let botStartTime = Date.now(); // dùng để tính uptime
+let botStartTime = Date.now();
 
 // ========== Slash Command Setup ==========
 const commands = [
@@ -33,6 +33,9 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'ping') {
+    await interaction.deferReply();
+    await interaction.editReply({ embeds: [embed] });
+    
     const ping = client.ws.ping;
     const clusterId = Math.floor(Math.random() * 1000);
     const shardId = Math.floor(Math.random() * 10000);
