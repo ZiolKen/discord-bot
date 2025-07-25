@@ -11,6 +11,14 @@ require('dotenv').config();
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 let botStartTime = Date.now();
 
+function formatUptime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+  const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+  const s = String(totalSeconds % 60).padStart(2, '0');
+  return `${h}h ${m}m ${s}s`;
+}
+
 // ==== SLASH COMMANDS ====
 const commands = [
   new SlashCommandBuilder()
@@ -43,22 +51,12 @@ client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
   try {
-    const guildRoute = Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID);
     const globalRoute = Routes.applicationCommands(process.env.CLIENT_ID);
 
-    // 🧽 CLEAR OLD GUILD COMMANDS FIRST
-    if (isDev) {
-      await rest.put(guildRoute, { body: [] });
-      console.log('🧹 Cleared old guild commands.');
-    }
-
-    // 📥 REGISTER COMMANDS
-    await rest.put(guildRoute, { body: commands });
     await rest.put(globalRoute, { body: commands });
-
-    console.log('✅ Slash commands registered for guild and global!');
+    console.log('✅ Slash commands registered (GLOBAL only)');
   } catch (err) {
-    console.error('❌ Error registering commands:', err);
+    console.error('❌ Error registering global commands:', err);
   }
 });
 
@@ -74,23 +72,17 @@ client.on('interactionCreate', async interaction => {
       await interaction.deferReply();
 
       const ping = client.ws.ping;
-      const clusterId = Math.floor(Math.random() * 1000);
-      const shardId = Math.floor(Math.random() * 10000);
-      const nodeName = `Node${Math.floor(Math.random() * 5) + 1}.ziol-prod.local`;
-
-      const uptimeMs = Date.now() - botStartTime;
-      const seconds = Math.floor((uptimeMs / 1000) % 60);
-      const minutes = Math.floor((uptimeMs / (1000 * 60)) % 60);
-      const hours = Math.floor((uptimeMs / (1000 * 60 * 60)));
-      const uptime = `${hours}h ${minutes}m ${seconds}s`;
+      const shardId = client.shard?.ids[0] ?? 0;
+      const uptime = formatUptime(Date.now() - botStartTime);
 
       const embed = new EmbedBuilder()
         .setTitle('🏓 Pong!')
         .setColor(0x00AEFF)
-        .setDescription(`**Cluster ${clusterId}:** ${(ping + Math.random() * 10).toFixed(2)}ms (avg)\n` +
-                        `**Shard ${shardId}:** ${(ping + Math.random() * 5).toFixed(2)}ms\n` +
-                        `**Node:** ${nodeName}\n` +
-                        `**Uptime:** ${uptime}`)
+        .setDescription(
+          `**Latency:** ${ping.toFixed(2)}ms\n` +
+          `**Shard ID:** ${shardId}\n` +
+          `**Uptime:** ${uptime}`
+        )
         .setTimestamp();
 
       await interaction.editReply({ embeds: [embed] });
@@ -101,11 +93,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.deferReply();
 
       const botUser = client.user;
-      const uptimeMs = Date.now() - botStartTime;
-      const seconds = Math.floor((uptimeMs / 1000) % 60);
-      const minutes = Math.floor((uptimeMs / (1000 * 60)) % 60);
-      const hours = Math.floor((uptimeMs / (1000 * 60 * 60)));
-      const uptime = `${hours}h ${minutes}m ${seconds}s`;
+      const uptime = formatUptime(Date.now() - botStartTime);
       const createdAt = `<t:${Math.floor(botUser.createdTimestamp / 1000)}:D>`;
       const serverCount = client.guilds.cache.size;
 
@@ -130,6 +118,9 @@ client.on('interactionCreate', async interaction => {
       await interaction.deferReply();
 
       const member = interaction.options.getMember('target') || interaction.member;
+        if (!member) {
+          return interaction.editReply({ content: '⚠️ User not found in this server.' });
+        }
       const user = member.user;
 
       const createdAt = `<t:${Math.floor(user.createdTimestamp / 1000)}:D>`;
