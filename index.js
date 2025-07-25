@@ -72,7 +72,7 @@ const commands = [
     .setDescription('Show bot creator and website info'),
   new SlashCommandBuilder()
     .setName('serverinfo')
-    .setDescription('Get information about the current server')
+    .setDescription('Get information about the current server'),
   
   new SlashCommandBuilder()
     .setName('ban')
