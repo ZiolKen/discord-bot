@@ -73,7 +73,6 @@ const commands = [
   new SlashCommandBuilder()
     .setName('serverinfo')
     .setDescription('Get information about the current server')
-    
   new SlashCommandBuilder()
     .setName('ban')
     .setDescription('Ban a user from the server')
