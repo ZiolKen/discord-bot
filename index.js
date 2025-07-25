@@ -262,138 +262,155 @@ client.on('interactionCreate', async interaction => {
       await interaction.editReply({ embeds: [embed] });
     }
     
-    // === /ban ===
-    else if (cmd === 'ban') {
-      if (!interaction.member.permissions.has('BanMembers')) {
-        return interaction.reply({ content: '❌ You do not have permission to ban members.', ephemeral: true });
-      }
+  		// === /ban ===
+  			if (cmd === 'ban') {
+						if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+								return interaction.reply({ content: '❌ You do not have permission to ban.', ephemeral: true });
+						}
 
-      const user = interaction.options.getUser('target');
-      const reason = interaction.options.getString('reason') || 'No reason provided';
+						const user = interaction.options.getUser('target');
+						const reason = interaction.options.getString('reason') || 'No reason provided';
+						const member = await interaction.guild.members.fetch(user.id).catch(() => null);
 
-      const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-      if (!member) return interaction.reply({ content: '❌ User not found in this server.', ephemeral: true });
+						if (!member) {
+								return interaction.reply({ content: '❌ User not found in this server.', ephemeral: true });
+						}
 
-      await member.ban({ reason });
-      await interaction.reply(`✅ Banned ${user.tag}.\nReason: ${reason}`);
-      const embed = new EmbedBuilder()
-      .setTitle('🔨 User Banned')
-      .setColor(0xFF0000)
-      .addFields(
-        { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-        { name: 'By', value: `${interaction.user.tag}`, inline: true },
-        { name: 'Reason', value: reason }
-      )
-      .setTimestamp();
-      await sendModLog(interaction.guild, embed);
-    }
+						await member.ban({ reason });
+						await interaction.reply(`✅ Banned ${user.tag}.\nReason: ${reason}`);
 
-    // === /unban ===
-    else if (cmd === 'unban') {
-      if (!interaction.member.permissions.has('BanMembers')) {
-        return interaction.reply({ content: '❌ You do not have permission to unban.', ephemeral: true });
-      }
+						const embed = new EmbedBuilder()
+								.setTitle('🔨 User Banned')
+								.setColor(0xFF0000)
+								.addFields(
+										{ name: 'User', value: `${user.tag} (${user.id})`, inline: true },
+										{ name: 'By', value: interaction.user.tag, inline: true },
+										{ name: 'Reason', value: reason }
+								)
+								.setTimestamp();
 
-      const userId = interaction.options.getString('userid');
-      await interaction.guild.bans.remove(userId).then(() => {
-        interaction.reply(`✅ Unbanned user with ID \`${userId}\`.`);
-        const embed = new EmbedBuilder()
-        .setTitle('♻️ User Unbanned')
-        .setColor(0x00FF7F)
-        .addFields(
-          { name: 'User ID', value: userId },
-          { name: 'By', value: interaction.user.tag }
-        )
-        .setTimestamp();
-        await sendModLog(interaction.guild, embed);
-      }).catch(() => {
-        interaction.reply({ content: '❌ Unable to unban. Check if ID is correct.', ephemeral: true });
-      });
-    }
+						await sendModLog(interaction.guild, embed);
+				}
 
-    // === /mute ===
-    else if (cmd === 'mute') {
-      if (!interaction.member.permissions.has('ModerateMembers')) {
-        return interaction.reply({ content: '❌ You do not have permission to mute.', ephemeral: true });
-      }
+				// === /unban ===
+				else if (cmd === 'unban') {
+						if (!interaction.member.permissions.has(PermissionsBitField.Flags.BanMembers)) {
+								return interaction.reply({ content: '❌ You do not have permission to unban.', ephemeral: true });
+						}
 
-      const user = interaction.options.getUser('target');
-      const reason = interaction.options.getString('reason') || 'No reason provided';
-      const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+						const userId = interaction.options.getString('userid');
 
-      if (!member) return interaction.reply({ content: '❌ User not found.', ephemeral: true });
+						try {
+								await interaction.guild.bans.remove(userId);
+								await interaction.reply(`✅ Unbanned user with ID \`${userId}\`.`);
 
-      const muteRole = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === 'muted');
-      if (!muteRole) return interaction.reply({ content: '❌ Role "Muted" not found.', ephemeral: true });
+								const embed = new EmbedBuilder()
+										.setTitle('♻️ User Unbanned')
+										.setColor(0x00FF7F)
+										.addFields(
+												{ name: 'User ID', value: userId },
+												{ name: 'By', value: interaction.user.tag }
+										)
+										.setTimestamp();
 
-      await member.roles.add(muteRole, reason);
-      await interaction.reply(`🔇 Muted ${user.tag}.\nReason: ${reason}`);
-      const embed = new EmbedBuilder()
-      .setTitle('🔇 User Muted')
-      .setColor(0xFFA500)
-      .addFields(
-        { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-        { name: 'By', value: `${interaction.user.tag}`, inline: true },
-        { name: 'Reason', value: reason }
-      )
-      .setTimestamp();
-      await sendModLog(interaction.guild, embed);
-    }
+								await sendModLog(interaction.guild, embed);
+						} catch (err) {
+								console.warn('⚠️ Unban failed:', err.message);
+								await interaction.reply({ content: '❌ Unable to unban. Check if ID is correct.', ephemeral: true });
+						}
+				}
 
-    // === /unmute ===
-    else if (cmd === 'mute') {
-      if (!interaction.member.permissions.has('ModerateMembers')) {
-        return interaction.reply({ content: '❌ You do not have permission to mute.', ephemeral: true });
-      }
+				// === /mute ===
+				else if (cmd === 'mute') {
+						if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+								return interaction.reply({ content: '❌ You do not have permission to mute.', ephemeral: true });
+						}
 
-      const user = interaction.options.getUser('target');
-      const reason = interaction.options.getString('reason') || 'No reason provided';
-      const rawDuration = interaction.options.getString('duration');
-      const durationMs = parseDuration(rawDuration);
-      const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+						const user = interaction.options.getUser('target');
+						const reason = interaction.options.getString('reason') || 'No reason provided';
+						const rawDuration = interaction.options.getString('duration');
+						const durationMs = parseDuration(rawDuration);
+						const member = await interaction.guild.members.fetch(user.id).catch(() => null);
 
-      if (!member) return interaction.reply({ content: '❌ User not found.', ephemeral: true });
+						if (!member) return interaction.reply({ content: '❌ User not found.', ephemeral: true });
 
-      if (durationMs && member.moderatable && member.communicationDisabledUntilTimestamp !== null) {
-        try {
-          await member.timeout(durationMs, reason);
-          await interaction.reply(`🔇 Muted ${user.tag} for ${rawDuration}.\nReason: ${reason}`);
+						// Use timeout (if possible)
+						if (durationMs && member.moderatable) {
+								try {
+										await member.timeout(durationMs, reason);
+										await interaction.reply(`🔇 Muted ${user.tag} for ${rawDuration}.\nReason: ${reason}`);
 
-          const embed = new EmbedBuilder()
-            .setTitle('🔇 User Timed Out')
-            .setColor(0xFFA500)
-            .addFields(
-              { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-              { name: 'By', value: `${interaction.user.tag}`, inline: true },
-              { name: 'Duration', value: rawDuration, inline: true },
-              { name: 'Reason', value: reason }
-            )
-            .setTimestamp();
-            await sendModLog(interaction.guild, embed);
-          return;
-        } catch (err) {
-          console.warn('⚠️ Timeout failed:', err.message);
-        }
-      }
+										const embed = new EmbedBuilder()
+												.setTitle('🔇 User Timed Out')
+												.setColor(0xFFA500)
+												.addFields(
+														{ name: 'User', value: `${user.tag} (${user.id})`, inline: true },
+														{ name: 'By', value: interaction.user.tag, inline: true },
+														{ name: 'Duration', value: rawDuration, inline: true },
+														{ name: 'Reason', value: reason }
+												)
+												.setTimestamp();
 
-      const muteRole = interaction.guild.roles.cache.find(role => role.name.toLowerCase() === 'muted');
-      if (!muteRole) return interaction.reply({ content: '❌ Role "Muted" not found.', ephemeral: true });
+										await sendModLog(interaction.guild, embed);
+										return;
+								} catch (err) {
+										console.warn('⚠️ Timeout failed:', err.message);
+								}
+						}
 
-      await member.roles.add(muteRole, reason);
-      await interaction.reply(`🔇 Muted ${user.tag} (via role).\nReason: ${reason}`);
+						// Fallback: assign "Muted" role
+						const muteRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'muted');
+						if (!muteRole) return interaction.reply({ content: '❌ Role "Muted" not found.', ephemeral: true });
 
-      const embed = new EmbedBuilder()
-        .setTitle('🔇 User Muted (Role)')
-        .setColor(0xFFA500)
-        .addFields(
-          { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-          { name: 'By', value: `${interaction.user.tag}`, inline: true },
-          ...(durationMs ? [{ name: 'Duration', value: rawDuration, inline: true }] : []),
-          { name: 'Reason', value: reason }
-        )
-        .setTimestamp();
-        await sendModLog(interaction.guild, embed);
-    }
+						await member.roles.add(muteRole, reason);
+						await interaction.reply(`🔇 Muted ${user.tag} (via role).\nReason: ${reason}`);
+
+						const embed = new EmbedBuilder()
+								.setTitle('🔇 User Muted (Role)')
+								.setColor(0xFFA500)
+								.addFields(
+										{ name: 'User', value: `${user.tag} (${user.id})`, inline: true },
+										{ name: 'By', value: interaction.user.tag, inline: true },
+										...(durationMs ? [{ name: 'Duration', value: rawDuration, inline: true }] : []),
+										{ name: 'Reason', value: reason }
+								)
+								.setTimestamp();
+
+						await sendModLog(interaction.guild, embed);
+				}
+
+				// === /unmute ===
+				else if (cmd === 'unmute') {
+						if (!interaction.member.permissions.has(PermissionsBitField.Flags.ModerateMembers)) {
+								return interaction.reply({ content: '❌ You do not have permission to unmute.', ephemeral: true });
+						}
+
+						const user = interaction.options.getUser('target');
+						const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+						if (!member) return interaction.reply({ content: '❌ User not found.', ephemeral: true });
+
+						const muteRole = interaction.guild.roles.cache.find(r => r.name.toLowerCase() === 'muted');
+						if (muteRole && member.roles.cache.has(muteRole.id)) {
+								await member.roles.remove(muteRole);
+						}
+
+						if (member.communicationDisabledUntilTimestamp) {
+								await member.timeout(null); // Remove timeout
+						}
+
+						await interaction.reply(`✅ Unmuted ${user.tag}`);
+
+						const embed = new EmbedBuilder()
+								.setTitle('🔊 User Unmuted')
+								.setColor(0x00FFFF)
+								.addFields(
+										{ name: 'User', value: `${user.tag} (${user.id})`, inline: true },
+										{ name: 'By', value: interaction.user.tag, inline: true }
+								)
+								.setTimestamp();
+
+						await sendModLog(interaction.guild, embed);
+				}
 
   } catch (err) {
     console.error('❌ Interaction error:', err);
