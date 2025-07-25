@@ -165,9 +165,13 @@ client.on('interactionCreate', async interaction => {
         embeds: [
           new EmbedBuilder()
             .setTitle('👨‍💻 Bot Developer')
-            .setDescription(`Created by **ZiolKen**\n[🌐 Visit website](https://ziolken.vercel.app)`)
+            .setDescription(
+              `Created by **ZiolKen**\n` +
+              `[🌐 Website](https://ziolken.vercel.app)\n` +
+              `[🤖 Invite Bot](https://discord.com/oauth2/authorize?client_id=${client.user.id}&scope=bot&permissions=8)`
+            )
             .setColor(0x00AEFF)
-            .setThumbnail('https://ziolken.vercel.app/favicon.ico')
+            .setThumbnail(client.user.displayAvatarURL())
             .setFooter({ text: 'Thanks for using the bot!' })
             .setTimestamp()
         ]
