@@ -40,17 +40,25 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 const isDev = process.env.NODE_ENV !== 'production';
 
 client.once('ready', async () => {
-  console.log(`Logged in as ${client.user.tag}`);
+  console.log(`✅ Logged in as ${client.user.tag}`);
 
   try {
-    const route = isDev
-      ? Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID)
-      : Routes.applicationCommands(process.env.CLIENT_ID);
+    const guildRoute = Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID);
+    const globalRoute = Routes.applicationCommands(process.env.CLIENT_ID);
 
-    await rest.put(route, { body: commands });
-    console.log(`Slash commands registered (${isDev ? 'guild' : 'global'})!`);
+    // 🧽 CLEAR OLD GUILD COMMANDS FIRST
+    if (isDev) {
+      await rest.put(guildRoute, { body: [] });
+      console.log('🧹 Cleared old guild commands.');
+    }
+
+    // 📥 REGISTER COMMANDS
+    await rest.put(guildRoute, { body: commands });
+    await rest.put(globalRoute, { body: commands });
+
+    console.log('✅ Slash commands registered for guild and global!');
   } catch (err) {
-    console.error('Command registration error:', err);
+    console.error('❌ Error registering commands:', err);
   }
 });
 
@@ -197,11 +205,11 @@ client.on('interactionCreate', async interaction => {
     }
 
   } catch (err) {
-    console.error('Interaction error:', err);
+    console.error('❌ Interaction error:', err);
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ content: '❌ Something went wrong.' });
+      await interaction.editReply({ content: '⚠️ Something went wrong.' });
     } else {
-      await interaction.reply({ content: '❌ Something went wrong.', ephemeral: true });
+      await interaction.reply({ content: '⚠️ Something went wrong.', ephemeral: true });
     }
   }
 });
