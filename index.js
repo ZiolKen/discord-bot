@@ -4,6 +4,7 @@ const {
   REST,
   Routes,
   SlashCommandBuilder,
+  ActivityType,
   EmbedBuilder
 } = require('discord.js');
 require('dotenv').config();
@@ -108,12 +109,17 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
+  
+  client.user.setActivity({
+    name: "https://botstatus.vercel.app/",
+    type: ActivityType.Watching,
+  })
 
   try {
     const globalRoute = Routes.applicationCommands(process.env.CLIENT_ID);
 
     await rest.put(globalRoute, { body: commands });
-    console.log('✅ Slash commands registered (GLOBAL only)');
+    console.log('✅ Slash commands registered (GLOBAL)');
   } catch (err) {
     console.error('❌ Error registering global commands:', err);
   }
