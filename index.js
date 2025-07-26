@@ -39,7 +39,7 @@ function parseDuration(str) {
 
 async function sendModLog(guild, embed) {
   const logChannel = guild.channels.cache.find(c =>
-    c.name.toLowerCase().includes('mod-logs') &&
+    c.name.toLowerCase().includes('log') &&
     c.isTextBased?.() &&
     c.viewable
   );
