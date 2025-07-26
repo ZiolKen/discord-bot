@@ -140,7 +140,8 @@ client.on('interactionCreate', async interaction => {
         .setDescription(
           `**Latency:** ${ping.toFixed(2)}ms\n` +
           `**Shard ID:** ${shardId}\n` +
-          `**Uptime:** ${uptime}`
+          `**Uptime:** ${uptime}\n` +
+          `[〽️ Bot Status](https://botstatus.vercel.app)`
         )
         .setTimestamp();
 
@@ -158,6 +159,9 @@ client.on('interactionCreate', async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle('🤖 Bot Info')
+        .setDescription(
+          `[〽️ Bot Status](https://botstatus.vercel.app)`
+        )
         .setColor(0x00AEFF)
         .setThumbnail(botUser.displayAvatarURL())
         .addFields(
@@ -216,9 +220,10 @@ client.on('interactionCreate', async interaction => {
           new EmbedBuilder()
             .setTitle('👨‍💻 Bot Developer')
             .setDescription(
-              `Created by **ZiolKen**\n` +
+              `Created by **@ZiolKen**\n` +
               `[🌐 Website](https://ziolken.vercel.app)\n` +
-              `[🤖 Invite Bot](https://discord.com/oauth2/authorize?client_id=${client.user.id}&scope=bot&permissions=8)`
+              `[🤖 Invite Bot](https://discord.com/oauth2/authorize?client_id=${client.user.id}&scope=bot&permissions=8)\n` +
+              `[〽️ Bot Status](https://botstatus.vercel.app)`
             )
             .setColor(0x00AEFF)
             .setThumbnail(client.user.displayAvatarURL())
