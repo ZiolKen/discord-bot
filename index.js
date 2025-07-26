@@ -353,7 +353,7 @@ client.on('interactionCreate', async interaction => {
 												.addFields(
 														{ name: 'User', value: `${user.tag} (${user.id})`, inline: true },
 														{ name: 'By', value: interaction.user.tag, inline: true },
-														{ name: 'Duration', value: rawDuration, inline: true },
+    												{ name: 'Duration', value: rawDuration, inline: true },
 														{ name: 'Reason', value: reason }
 												)
 												.setTimestamp();
