@@ -351,10 +351,10 @@ client.on('interactionCreate', async interaction => {
 												.setTitle('🔇 User Timed Out')
 												.setColor(0xFFA500)
 												.addFields(
-														{ name: 'User', value: `${user.tag} (${user.id})`, inline: true },
-														{ name: 'By', value: interaction.user.tag, inline: true },
-    												{ name: 'Duration', value: rawDuration, inline: true },
-														{ name: 'Reason', value: reason }
+                          { name: 'User', value: `${user.tag} (${user.id})`, inline: true },
+                          { name: 'By', value: interaction.user.tag, inline: true },
+                          { name: 'Duration', value: rawDuration, inline: true },
+                          { name: 'Reason', value: reason }
 												)
 												.setTimestamp();
 
