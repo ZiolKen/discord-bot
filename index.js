@@ -424,5 +424,29 @@ client.login(process.env.TOKEN);
 
 const express = require('express');
 const app = express();
-app.get('/', (req, res) => res.send('Bot is running!'));
-app.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
+
+app.get("/", (req, res) => {
+  res.send("🤖 Bot is running!");
+});
+
+app.get("/status", (req, res) => {
+  if (!client || !client.isReady()) {
+    return res.status(503).json({ status: "offline" });
+  }
+
+  const statusData = {
+    status: "online",
+    ping: client.ws.ping,
+    uptime: formatUptime(Date.now() - botStartTime),
+    guilds: client.guilds.cache.size,
+    users: client.guilds.cache.reduce((acc, g) => acc + (g.memberCount || 0), 0),
+    updated: new Date().toISOString()
+  };
+
+  res.json(statusData);
+});
+
+app.listen(PORT, () => {
+  console.log(`🌐 Express server listening on port ${PORT}`);
+});
