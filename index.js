@@ -9,7 +9,15 @@ const {
 } = require('discord.js');
 require('dotenv').config();
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildPresences,
+  ],
+});
 let botStartTime = Date.now();
 
 function formatUptime(ms) {
@@ -91,7 +99,8 @@ client.once('ready', async () => {
   
   setInterval(() => {
     const ping = client.ws.ping;
-    console.log(`🧠 Keep-alive ping: ${ping.toFixed(2)}ms`);
+    client.guilds.cache.first()?.members.me?.presence;
+    console.log(`✅ Keep-alive ping: ${ping.toFixed(2)}ms`);
   }, 60_000);
 
   try {
