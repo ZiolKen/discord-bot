@@ -88,6 +88,11 @@ client.once('ready', async () => {
     name: "https://botstatus.vercel.app/",
     type: ActivityType.Watching,
   })
+  
+  setInterval(() => {
+    const ping = client.ws.ping;
+    console.log(`🧠 Keep-alive ping: ${ping.toFixed(2)}ms`);
+  }, 60_000);
 
   try {
     const globalRoute = Routes.applicationCommands(process.env.CLIENT_ID);
