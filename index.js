@@ -258,10 +258,6 @@ client.on('interactionCreate', async interaction => {
   }
 });
 
-client.login(process.env.TOKEN);
-
-
-
 const express = require('express');
 const cors = require("cors");
 const app = express();
@@ -292,3 +288,13 @@ app.get("/status", (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Express server listening on port ${PORT}`);
 });
+
+if (!process.env.TOKEN) {
+  console.error("❌ Missing Discord TOKEN environment variable!");
+  process.exit(1);
+}
+
+setTimeout(() => {
+  console.log("🔑 Logging in to Discord...");
+  client.login(process.env.TOKEN);
+}, 3000);
