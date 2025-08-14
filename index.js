@@ -101,7 +101,7 @@ client.once('ready', async () => {
     const ping = client.ws.ping;
     client.guilds.cache.first()?.members.me?.presence;
     console.log(`✅ Keep-alive ping: ${ping.toFixed(2)}ms`);
-  }, 50_000);
+  }, 60_000);
 
   try {
     const globalRoute = Routes.applicationCommands(process.env.CLIENT_ID);
