@@ -306,4 +306,4 @@ if (!process.env.TOKEN) {
 setTimeout(() => {
   console.log("🔑 Logging in to Discord...");
   client.login(process.env.TOKEN);
-}, 3000);
+}, 1000);
