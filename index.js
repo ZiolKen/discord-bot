@@ -7,6 +7,8 @@ const {
   ActivityType,
   EmbedBuilder
 } = require('discord.js');
+const express = require('express');
+const cors = require('cors');
 require('dotenv').config();
 
 const client = new Client({
@@ -14,11 +16,10 @@ const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildPresences,
   ],
 });
-let botStartTime = Date.now();
+
+const botStartTime = Date.now();
 
 function formatUptime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -28,282 +29,173 @@ function formatUptime(ms) {
   return `${h}h ${m}m ${s}s`;
 }
 
-function parseDuration(str) {
-  const match = str?.match(/^(\d+)(s|m|h|d)$/i);
-  if (!match) return null;
-
-  const num = parseInt(match[1]);
-  const unit = match[2].toLowerCase();
-
-  const multipliers = {
-    s: 1000,
-    m: 60_000,
-    h: 3_600_000,
-    d: 86_400_000
-  };
-
-  return num * multipliers[unit];
-}
-
-async function sendModLog(guild, embed) {
-  const logChannel = guild.channels.cache.find(c =>
-    c.name.toLowerCase().includes('log') &&
-    c.isTextBased?.() &&
-    c.viewable
-  );
-  if (logChannel) {
-    try {
-      await logChannel.send({ embeds: [embed] });
-    } catch (err) {
-      console.warn(`⚠️ Couldn't send log to ${logChannel.name}:`, err.message);
-    }
-  }
-}
-
-// ==== SLASH COMMANDS ====
 const commands = [
-  new SlashCommandBuilder()
-    .setName('ping')
-    .setDescription('Check the bot latency'),
-  new SlashCommandBuilder()
-    .setName('info')
-    .setDescription('Get information about the bot'),
-  new SlashCommandBuilder()
-    .setName('userinfo')
-    .setDescription('Get information about a user')
+  new SlashCommandBuilder().setName('ping').setDescription('Check bot latency'),
+  new SlashCommandBuilder().setName('info').setDescription('Get bot info'),
+  new SlashCommandBuilder().setName('serverinfo').setDescription('Get current server info'),
+  new SlashCommandBuilder().setName('userinfo')
+    .setDescription('Get info about a user')
     .addUserOption(option =>
-      option.setName('target')
-        .setDescription('User to get info about')
-        .setRequired(false)
-    ),
-  new SlashCommandBuilder()
-    .setName('credit')
-    .setDescription('Show bot creator and website info'),
-  new SlashCommandBuilder()
-    .setName('serverinfo')
-    .setDescription('Get information about the current server'),
+      option.setName('target').setDescription('User to lookup').setRequired(false)),
+  new SlashCommandBuilder().setName('credit').setDescription('Show bot creator info'),
 ].map(cmd => cmd.toJSON());
 
-
-// ==== REGISTER COMMANDS ====
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
-const isDev = process.env.NODE_ENV !== 'production';
 
 client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
-  
+
   client.user.setActivity({
-    name: "https://botstatus.vercel.app/",
-    type: ActivityType.Watching,
-  })
-  
-  setInterval(() => {
-    const ping = client.ws.ping;
-    client.guilds.cache.first()?.members.me?.presence;
-    console.log(`✅ Keep-alive ping: ${ping.toFixed(2)}ms`);
-  }, 30_000);
+    name: 'https://botstatus.vercel.app/',
+    type: ActivityType.Watching
+  });
 
   try {
-    const globalRoute = Routes.applicationCommands(process.env.CLIENT_ID);
-
-    await rest.put(globalRoute, { body: commands });
-    console.log('✅ Slash commands registered (GLOBAL)');
+    await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), {
+      body: commands
+    });
+    console.log('✅ Slash commands registered.');
   } catch (err) {
-    console.error('❌ Error registering global commands:', err);
+    console.error('❌ Failed to register commands:', err);
   }
+
+  setInterval(() => {
+    console.log(`✅ Ping: ${client.ws.ping.toFixed(2)}ms`);
+  }, 30000);
 });
 
-// ==== INTERACTION HANDLER ====
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
+  const { commandName } = interaction;
   try {
-    const cmd = interaction.commandName;
-
-    // === /ping ===
-    if (cmd === 'ping') {
-      await interaction.deferReply();
-
+    if (commandName === 'ping') {
       const ping = client.ws.ping;
-      const shardId = client.shard?.ids[0] ?? 0;
       const uptime = formatUptime(Date.now() - botStartTime);
 
       const embed = new EmbedBuilder()
         .setTitle('🏓 Pong!')
         .setColor(0x00AEFF)
-        .setDescription(
-          `**Latency:** ${ping.toFixed(2)}ms\n` +
-          `**Shard ID:** ${shardId}\n` +
-          `**Uptime:** ${uptime}\n` +
-          `[〽️ Bot Status](https://botstatus.vercel.app)`
-        )
+        .setDescription(`**Ping:** ${ping.toFixed(2)}ms\n**Uptime:** ${uptime}`)
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
 
-    // === /info ===
-    else if (cmd === 'info') {
-      await interaction.deferReply();
-
+    else if (commandName === 'info') {
       const botUser = client.user;
       const uptime = formatUptime(Date.now() - botStartTime);
       const createdAt = `<t:${Math.floor(botUser.createdTimestamp / 1000)}:D>`;
-      const serverCount = client.guilds.cache.size;
+      const servers = client.guilds.cache.size;
 
       const embed = new EmbedBuilder()
         .setTitle('🤖 Bot Info')
-        .setDescription(
-          `[〽️ Bot Status](https://botstatus.vercel.app)`
-        )
         .setColor(0x00AEFF)
+        .addFields(
+          { name: 'Username', value: botUser.tag, inline: true },
+          { name: 'ID', value: botUser.id, inline: true },
+          { name: 'Created', value: createdAt, inline: true },
+          { name: 'Servers', value: `${servers}`, inline: true },
+          { name: 'Uptime', value: uptime, inline: true }
+        )
         .setThumbnail(botUser.displayAvatarURL())
-        .addFields(
-          { name: 'Name', value: `${botUser.tag}`, inline: true },
-          { name: 'ID', value: `${botUser.id}`, inline: true },
-          { name: 'Created', value: `${createdAt}`, inline: true },
-          { name: 'Servers', value: `${serverCount}`, inline: true },
-          { name: 'Uptime', value: `${uptime}`, inline: true }
-        )
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await interaction.reply({ embeds: [embed] });
     }
 
-    // === /userinfo ===
-    else if (cmd === 'userinfo') {
-      await interaction.deferReply();
-
-      const member = interaction.options.getMember('target') || interaction.member;
-        if (!member) {
-          return interaction.editReply({ content: '⚠️ User not found in this server.' });
-        }
-      const user = member.user;
-
-      const createdAt = `<t:${Math.floor(user.createdTimestamp / 1000)}:D>`;
-      const joinedAt = member.joinedAt
-        ? `<t:${Math.floor(member.joinedAt.getTime() / 1000)}:D>`
-        : 'N/A';
-
-      const roles = member.roles.cache
-        .filter(r => r.id !== interaction.guild.id)
-        .map(r => r.toString())
-        .join(', ') || 'None';
-
-      const embed = new EmbedBuilder()
-        .setTitle(`ℹ️ User Info: ${user.tag}`)
-        .setThumbnail(user.displayAvatarURL({ size: 1024 }))
-        .setColor(member.displayHexColor || 0x00AEFF)
-        .addFields(
-          { name: 'Username', value: `${user.username}`, inline: true },
-          { name: 'User ID', value: `${user.id}`, inline: true },
-          { name: 'Account Created', value: `${createdAt}`, inline: true },
-          { name: 'Joined Server', value: `${joinedAt}`, inline: true },
-          { name: 'Roles', value: `${roles}`, inline: false }
-        )
-        .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
-        .setTimestamp();
-
-      await interaction.editReply({ embeds: [embed] });
-    }
-
-    // === /credit ===
-    else if (cmd === 'credit') {
-      await interaction.reply({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle('👨‍💻 Bot Developer')
-            .setDescription(
-              `Created by **@ZiolKen**\n` +
-              `[🌐 Website](https://ziolken.vercel.app)\n` +
-              `[🤖 Invite Bot](https://discord.com/oauth2/authorize?client_id=${client.user.id}&scope=bot&permissions=8)\n` +
-              `[〽️ Bot Status](https://botstatus.vercel.app)`
-            )
-            .setColor(0x00AEFF)
-            .setThumbnail(client.user.displayAvatarURL())
-            .setFooter({ text: 'Thanks for using the bot!' })
-            .setTimestamp()
-        ]
-      });
-    }
-
-    // === /serverinfo ===
-    else if (cmd === 'serverinfo') {
-      await interaction.deferReply();
-
+    else if (commandName === 'serverinfo') {
       const guild = interaction.guild;
       const owner = await guild.fetchOwner();
-      const rolesCount = guild.roles.cache.size;
-      const channelsCount = guild.channels.cache.size;
-      const memberCount = guild.memberCount;
-      const createdAt = `<t:${Math.floor(guild.createdTimestamp / 1000)}:D>`;
-
       const embed = new EmbedBuilder()
         .setTitle('🏠 Server Info')
         .setColor(0x00AEFF)
-        .setThumbnail(guild.iconURL({ dynamic: true }))
         .addFields(
-          { name: 'Server Name', value: `${guild.name}`, inline: true },
-          { name: 'Server ID', value: `${guild.id}`, inline: true },
+          { name: 'Name', value: guild.name, inline: true },
+          { name: 'ID', value: guild.id, inline: true },
           { name: 'Owner', value: `<@${owner.id}>`, inline: true },
-          { name: 'Members', value: `${memberCount}`, inline: true },
-          { name: 'Roles', value: `${rolesCount}`, inline: true },
-          { name: 'Channels', value: `${channelsCount}`, inline: true },
-          { name: 'Created', value: `${createdAt}`, inline: false }
+          { name: 'Members', value: `${guild.memberCount}`, inline: true },
+          { name: 'Created', value: `<t:${Math.floor(guild.createdTimestamp / 1000)}:D>`, inline: true }
         )
-        .setFooter({ text: `Requested by ${interaction.user.tag}`, iconURL: interaction.user.displayAvatarURL() })
+        .setThumbnail(guild.iconURL({ dynamic: true }))
         .setTimestamp();
-        
-      await interaction.editReply({ embeds: [embed] });
+
+      await interaction.reply({ embeds: [embed] });
+    }
+
+    else if (commandName === 'userinfo') {
+      const member = interaction.options.getMember('target') || interaction.member;
+      const user = member.user;
+      const joined = member.joinedAt ? `<t:${Math.floor(member.joinedAt.getTime() / 1000)}:D>` : 'N/A';
+
+      const embed = new EmbedBuilder()
+        .setTitle(`ℹ️ User Info: ${user.tag}`)
+        .setColor(member.displayHexColor || 0x00AEFF)
+        .addFields(
+          { name: 'Username', value: user.username, inline: true },
+          { name: 'ID', value: user.id, inline: true },
+          { name: 'Joined', value: joined, inline: true }
+        )
+        .setThumbnail(user.displayAvatarURL({ size: 1024 }))
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
+    }
+
+    else if (commandName === 'credit') {
+      const embed = new EmbedBuilder()
+        .setTitle('👨‍💻 Bot Developer')
+        .setColor(0x00AEFF)
+        .setDescription(
+          `Created by **@ZiolKen**\n[🌐 Website](https://ziolken.vercel.app)\n[🤖 Invite](https://discord.com/oauth2/authorize?client_id=1398238289500307578&scope=bot&permissions=8)\n[〽️ Bot Status](https://botstatus.vercel.app/)`
+        )
+        .setThumbnail(client.user.displayAvatarURL())
+        .setTimestamp();
+
+      await interaction.reply({ embeds: [embed] });
     }
 
   } catch (err) {
     console.error('❌ Interaction error:', err);
-    if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ content: '⚠️ Something went wrong.' });
-    } else {
-      await interaction.reply({ content: '⚠️ Something went wrong.', ephemeral: true });
-    }
+    await interaction.reply({ content: '⚠️ Something went wrong.', ephemeral: true });
   }
 });
 
-const express = require('express');
-const cors = require("cors");
+// ==== EXPRESS API ====
 const app = express();
 app.use(cors());
-const PORT = process.env.PORT || 3000;
 
-app.get("/", (req, res) => {
-  res.send("🤖 Bot is running!");
+app.get('/', (req, res) => {
+  res.send('🤖 Bot is running!');
 });
 
-app.get("/status", (req, res) => {
+app.get('/status', (req, res) => {
   if (!client || !client.isReady()) {
-    return res.status(503).json({ status: "offline" });
+    return res.status(503).json({ status: 'offline' });
   }
 
-  const statusData = {
-    status: "online",
+  res.json({
+    status: 'online',
     ping: client.ws.ping,
     uptime: formatUptime(Date.now() - botStartTime),
     guilds: client.guilds.cache.size,
     users: client.guilds.cache.reduce((acc, g) => acc + (g.memberCount || 0), 0),
     updated: new Date().toISOString()
-  };
-
-  res.json(statusData);
+  });
 });
 
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🌐 Express server listening on port ${PORT}`);
+  console.log(`🌐 Express server running at http://localhost:${PORT}`);
 });
 
-if (!process.env.TOKEN) {
-  console.error("❌ Missing Discord TOKEN environment variable!");
+// ==== START BOT ====
+if (!process.env.TOKEN || !process.env.CLIENT_ID) {
+  console.error('❌ Missing TOKEN or CLIENT_ID in .env');
   process.exit(1);
 }
 
 setTimeout(() => {
-  console.log("🔑 Logging in to Discord...");
+  console.log('🔑 Logging into Discord...');
   client.login(process.env.TOKEN);
 }, 1000);
