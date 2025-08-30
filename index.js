@@ -75,8 +75,9 @@ client.on('interactionCreate', async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle('〽️ Pong!')
-        .setColor(0x00AEFF)
+        .setColor(0xFF00FF)
         .setDescription(`**Ping:** ${ping.toFixed(2)}ms\n**Uptime:** ${uptime}\n**Status:** [Bot Status](https://botstatus.vercel.app/)`)
+        .setThumbnail('https://raw.githubusercontent.com/ZiolKen/discord-bot-status/main/assets/ico.png')
         .setTimestamp();
 
       await interaction.reply({ embeds: [embed] });
@@ -90,7 +91,7 @@ client.on('interactionCreate', async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle('🤖 Bot Info')
-        .setColor(0x00AEFF)
+        .setColor(0xFF00FF)
         .addFields(
           { name: 'Username', value: botUser.tag, inline: true },
           { name: 'ID', value: botUser.id, inline: true },
@@ -110,7 +111,7 @@ client.on('interactionCreate', async interaction => {
       const owner = await guild.fetchOwner();
       const embed = new EmbedBuilder()
         .setTitle('🏠 Server Info')
-        .setColor(0x00AEFF)
+        .setColor(0xFF00FF)
         .addFields(
           { name: 'Name', value: guild.name, inline: true },
           { name: 'ID', value: guild.id, inline: true },
@@ -131,7 +132,7 @@ client.on('interactionCreate', async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle(`ℹ️ User Info: ${user.tag}`)
-        .setColor(member.displayHexColor || 0x00AEFF)
+        .setColor(0xFF00FF)
         .addFields(
           { name: 'Username', value: user.username, inline: true },
           { name: 'ID', value: user.id, inline: true },
@@ -146,7 +147,7 @@ client.on('interactionCreate', async interaction => {
     else if (commandName === 'credit') {
       const embed = new EmbedBuilder()
         .setTitle('👨‍💻 Bot Developer')
-        .setColor(0x00AEFF)
+        .setColor(0xFF00FF)
         .setDescription(
           `Created by **@ZiolKen**\n[🌐 Website](https://ziolken.vercel.app)\n[🤖 Invite Bot](https://discord.com/oauth2/authorize?client_id=1398238289500307578&scope=bot&permissions=8)\n[〽️ Bot Status](https://botstatus.vercel.app/)`
         )
