@@ -74,9 +74,9 @@ client.on('interactionCreate', async interaction => {
       const uptime = formatUptime(Date.now() - botStartTime);
 
       const embed = new EmbedBuilder()
-        .setTitle('🏓 Pong!')
+        .setTitle('〽️ Pong!')
         .setColor(0x00AEFF)
-        .setDescription(`**Ping:** ${ping.toFixed(2)}ms\n**Uptime:** ${uptime}`)
+        .setDescription(`**Ping:** ${ping.toFixed(2)}ms\n**Uptime:** ${uptime}\n**Status:** [Bot Status](https://botstatus.vercel.app/)`)
         .setTimestamp();
 
       await interaction.reply({ embeds: [embed] });
@@ -98,6 +98,7 @@ client.on('interactionCreate', async interaction => {
           { name: 'Servers', value: `${servers}`, inline: true },
           { name: 'Uptime', value: uptime, inline: true }
         )
+        .setDescription(`**Status:** [Bot Status](https://botstatus.vercel.app/)`)
         .setThumbnail(botUser.displayAvatarURL())
         .setTimestamp();
 
@@ -147,7 +148,7 @@ client.on('interactionCreate', async interaction => {
         .setTitle('👨‍💻 Bot Developer')
         .setColor(0x00AEFF)
         .setDescription(
-          `Created by **@ZiolKen**\n[🌐 Website](https://ziolken.vercel.app)\n[🤖 Invite](https://discord.com/oauth2/authorize?client_id=1398238289500307578&scope=bot&permissions=8)\n[〽️ Bot Status](https://botstatus.vercel.app/)`
+          `Created by **@ZiolKen**\n[🌐 Website](https://ziolken.vercel.app)\n[🤖 Invite Bot](https://discord.com/oauth2/authorize?client_id=1398238289500307578&scope=bot&permissions=8)\n[〽️ Bot Status](https://botstatus.vercel.app/)`
         )
         .setThumbnail(client.user.displayAvatarURL())
         .setTimestamp();
