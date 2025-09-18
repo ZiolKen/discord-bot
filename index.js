@@ -172,7 +172,7 @@ client.on('interactionCreate', async interaction => {
 
       console.log(`[${timestamp}] ${username} (ID: ${userId}) used /serverlist`);
 
-      if (userId !== 951037699320602674) {
+      if (userId !== '951037699320602674') {
         await interaction.reply({ content: '🚫 You do not have permission to use this command.', ephemeral: true });
         return;
       }
