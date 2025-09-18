@@ -9,6 +9,7 @@ const {
 } = require('discord.js');
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 require('dotenv').config();
 
 const client = new Client({
@@ -38,6 +39,9 @@ const commands = [
     .addUserOption(option =>
       option.setName('target').setDescription('User to lookup').setRequired(false)),
   new SlashCommandBuilder().setName('credit').setDescription('Show bot creator info'),
+  new SlashCommandBuilder()
+    .setName('serverlist')
+    .setDescription('Show all servers the bot is in'),
 ].map(cmd => cmd.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
@@ -62,6 +66,10 @@ client.once('clientReady', async () => {
   setInterval(() => {
     console.log(`✅ Ping: ${client.ws.ping.toFixed(2)}ms`);
   }, 30000);
+});
+
+client.on('guildCreate', guild => {
+  console.log(`✅ Joined new server: ${guild.name} (ID: ${guild.id})`);
 });
 
 client.on('interactionCreate', async interaction => {
@@ -155,6 +163,31 @@ client.on('interactionCreate', async interaction => {
         .setTimestamp();
 
       await interaction.reply({ embeds: [embed] });
+    }
+    
+    if (commandName === 'serverlist') {
+      const userId = interaction.user.id;
+      const username = interaction.user.username;
+      const timestamp = new Date().toISOString();
+
+      console.log(`[${timestamp}] ${username} (ID: ${userId}) used /serverlist`);
+
+      if (userId !== 951037699320602674) {
+        await interaction.reply({ content: '🚫 You do not have permission to use this command.', ephemeral: true });
+        return;
+      }
+
+      const guilds = client.guilds.cache.map((g, i) => `${i + 1}. ${g.name} (ID: ${g.id})`);
+      const serverListStr = guilds.join('\n');
+
+      if (serverListStr.length > 1900) {
+        const filename = 'serverlist.txt';
+        fs.writeFileSync(filename, serverListStr, { encoding: 'utf8' });
+        await interaction.reply({ content: '📄 Server list is too long, see the attached file:', files: [filename] });
+        fs.unlinkSync(filename);
+      } else {
+        await interaction.reply(`🤖 The bot is currently in these servers:\n${serverListStr}`);
+      }
     }
 
   } catch (err) {
