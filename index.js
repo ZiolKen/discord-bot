@@ -46,6 +46,46 @@ const commands = [
 
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
+const services = {
+  api: 'online',
+  gateway: 'offline',
+  commands: 'online'
+};
+
+const incidents = {
+  api: null,
+  gateway: null,
+  commands: null
+};
+
+function now() {
+  return new Date().toISOString();
+}
+
+function createIncident(service, title) {
+  if (incidents[service]) return;
+
+  incidents[service] = {
+    service,
+    title,
+    status: 'investigating',
+    startedAt: now()
+  };
+
+  console.log(`🚨 Incident created: ${service}`);
+}
+
+function resolveIncident(service) {
+  if (!incidents[service]) return;
+
+  incidents[service].status = 'resolved';
+  incidents[service].resolvedAt = now();
+
+  console.log(`✅ Incident resolved: ${service}`);
+
+  incidents[service] = null;
+}
+
 client.once('clientReady', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
@@ -62,6 +102,9 @@ client.once('clientReady', async () => {
   } catch (err) {
     console.error('❌ Failed to register commands:', err);
   }
+  
+  services.gateway = 'online';
+  resolveIncident('gateway');
 
   setInterval(() => {
     console.log(`✅ Ping: ${client.ws.ping.toFixed(2)}ms`);
@@ -72,11 +115,21 @@ client.on('guildCreate', guild => {
   console.log(`✅ Joined new server: ${guild.name} (ID: ${guild.id})`);
 });
 
+client.on('shardDisconnect', () => {
+  services.gateway = 'offline';
+  createIncident('gateway', 'Discord Gateway disconnected');
+});
+
+client.on('shardResume', () => {
+  services.gateway = 'online';
+  resolveIncident('gateway');
+});
+
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
-
-  const { commandName } = interaction;
+  services.commands = 'online';
   try {
+  const { commandName } = interaction;
     if (commandName === 'ping') {
       const ping = client.ws.ping;
       const uptime = formatUptime(Date.now() - botStartTime);
@@ -165,7 +218,7 @@ client.on('interactionCreate', async interaction => {
       await interaction.reply({ embeds: [embed] });
     }
     
-    if (commandName === 'serverlist') {
+    else if (commandName === 'serverlist') {
       const userId = interaction.user.id;
       const username = interaction.user.username;
       const timestamp = new Date().toISOString();
@@ -189,10 +242,17 @@ client.on('interactionCreate', async interaction => {
         await interaction.reply(`🤖 The bot is currently in these servers:\n${serverListStr}`);
       }
     }
-
   } catch (err) {
-    console.error('❌ Interaction error:', err);
-    await interaction.reply({ content: '⚠️ Something went wrong.', ephemeral: true });
+    console.error('❌ Command error:', err);
+    services.commands = 'offline';
+    createIncident('commands', 'Command execution failed');
+
+    if (!interaction.replied) {
+      await interaction.reply({
+        content: '⚠️ Command error.',
+        ephemeral: true
+      });
+    }
   }
 });
 
@@ -205,18 +265,30 @@ app.get('/', (req, res) => {
 });
 
 app.get('/status', (req, res) => {
-  if (!client || !client.isReady()) {
+  if (!client.isReady()) {
+    services.api = 'offline';
+    createIncident('api', 'API unreachable');
     return res.status(503).json({ status: 'offline' });
   }
+
+  services.api = 'online';
+  resolveIncident('api');
 
   res.json({
     status: 'online',
     ping: client.ws.ping,
     uptime: formatUptime(Date.now() - botStartTime),
     guilds: client.guilds.cache.size,
-    users: client.guilds.cache.reduce((acc, g) => acc + (g.memberCount || 0), 0),
-    updated: new Date().toISOString()
+    users: client.guilds.cache.reduce((a, g) => a + (g.memberCount || 0), 0),
+    services,
+    updated: now()
   });
+});
+
+app.get('/incidents', (req, res) => {
+  res.json(
+    Object.values(incidents).filter(Boolean)
+  );
 });
 
 const PORT = process.env.PORT || 3000;
