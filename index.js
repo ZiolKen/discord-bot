@@ -126,6 +126,14 @@ client.once('ready', async () => {
   }, 30000);
 });
 
+process.on('unhandledRejection', err => {
+  console.error('UNHANDLED REJECTION:', err);
+});
+
+process.on('uncaughtException', err => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+});
+
 client.on('guildCreate', guild => {
   console.log(`✅ Joined new server: ${guild.name} (ID: ${guild.id})`);
 });
