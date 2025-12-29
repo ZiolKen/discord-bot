@@ -52,38 +52,42 @@ const services = {
   commands: 'online'
 };
 
-const incidents = {
-  api: null,
-  gateway: null,
-  commands: null
-};
+const incidents = [];
 
 function now() {
   return new Date().toISOString();
 }
 
 function createIncident(service, title) {
-  if (incidents[service]) return;
+  const active = incidents.find(
+    i => i.service === service && !i.resolvedAt
+  );
+  if (active) return;
 
-  incidents[service] = {
+  incidents.push({
+    id: crypto.randomUUID(),
     service,
     title,
     status: 'investigating',
-    startedAt: now()
-  };
+    startedAt: now(),
+    resolvedAt: null
+  });
 
   console.log(`🚨 Incident created: ${service}`);
 }
 
 function resolveIncident(service) {
-  if (!incidents[service]) return;
+  const incident = incidents
+    .slice()
+    .reverse()
+    .find(i => i.service === service && !i.resolvedAt);
 
-  incidents[service].status = 'resolved';
-  incidents[service].resolvedAt = now();
+  if (!incident) return;
+
+  incident.status = 'resolved';
+  incident.resolvedAt = now();
 
   console.log(`✅ Incident resolved: ${service}`);
-
-  incidents[service] = null;
 }
 
 client.once('clientReady', async () => {
@@ -266,7 +270,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/status', (req, res) => {
-  if (!client.isReady() || client.ws.status !== 0) {
+  if (!client.isReady()) {
     services.api = 'offline';
     createIncident('api', 'API unreachable');
     return res.status(503).json({ status: 'offline' });
@@ -288,7 +292,9 @@ app.get('/status', (req, res) => {
 
 app.get('/incidents', (req, res) => {
   res.json(
-    Object.values(incidents).filter(Boolean)
+    incidents
+      .slice(-50)
+      .reverse()
   );
 });
 
