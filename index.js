@@ -101,7 +101,7 @@ function resolveIncident(service) {
   console.log(`✅ Incident resolved: ${service}`);
 }
 
-client.once('clientReady', async () => {
+client.once('ready', async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
   client.user.setActivity({
