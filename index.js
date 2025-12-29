@@ -115,12 +115,12 @@ client.on('guildCreate', guild => {
   console.log(`✅ Joined new server: ${guild.name} (ID: ${guild.id})`);
 });
 
-client.on('shardDisconnect', () => {
+client.on('disconnect', () => {
   services.gateway = 'offline';
   createIncident('gateway', 'Discord Gateway disconnected');
 });
 
-client.on('shardResume', () => {
+client.on('reconnecting', () => {
   services.gateway = 'online';
   resolveIncident('gateway');
 });
@@ -128,6 +128,7 @@ client.on('shardResume', () => {
 client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
   services.commands = 'online';
+  resolveIncident('commands');
   try {
   const { commandName } = interaction;
     if (commandName === 'ping') {
@@ -265,7 +266,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/status', (req, res) => {
-  if (!client.isReady()) {
+  if (!client.isReady() || client.ws.status !== 0) {
     services.api = 'offline';
     createIncident('api', 'API unreachable');
     return res.status(503).json({ status: 'offline' });
