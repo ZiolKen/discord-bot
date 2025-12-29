@@ -10,6 +10,7 @@ const {
 const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const client = new Client({
@@ -129,12 +130,12 @@ client.on('guildCreate', guild => {
   console.log(`✅ Joined new server: ${guild.name} (ID: ${guild.id})`);
 });
 
-client.on('disconnect', () => {
+client.on('shardDisconnect', () => {
   services.gateway = 'offline';
   createIncident('gateway', 'Discord Gateway disconnected');
 });
 
-client.on('reconnecting', () => {
+client.on('shardResume', () => {
   services.gateway = 'online';
   resolveIncident('gateway');
 });
