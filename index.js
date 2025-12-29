@@ -22,12 +22,22 @@ const client = new Client({
 
 const botStartTime = Date.now();
 
+const lastBoot = new Date().toISOString();
+const HOST_PROVIDER = 'Render.com';
+
 function formatUptime(ms) {
   const totalSeconds = Math.floor(ms / 1000);
   const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
   const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
   const s = String(totalSeconds % 60).padStart(2, '0');
   return `${h}h ${m}m ${s}s`;
+}
+
+function getHostServiceStatus() {
+  if (services.api === 'online' && services.gateway === 'online') {
+    return 'operational';
+  }
+  return 'down';
 }
 
 const commands = [
@@ -279,15 +289,21 @@ app.get('/status', (req, res) => {
   services.api = 'online';
   resolveIncident('api');
 
-  res.json({
-    status: 'online',
-    ping: client.ws.ping,
-    uptime: formatUptime(Date.now() - botStartTime),
-    guilds: client.guilds.cache.size,
-    users: client.guilds.cache.reduce((a, g) => a + (g.memberCount || 0), 0),
-    services,
-    updated: now()
-  });
+res.json({
+  status: 'online',
+  ping: client.ws.ping,
+  uptime: formatUptime(Date.now() - botStartTime),
+  lastBoot,
+  updated: now(),
+  host: HOST_PROVIDER,
+  hostService: getHostServiceStatus(),
+  guilds: client.guilds.cache.size,
+  users: client.guilds.cache.reduce(
+    (a, g) => a + (g.memberCount || 0),
+    0
+  ),
+  services
+});
 });
 
 app.get('/incidents', (req, res) => {
