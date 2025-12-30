@@ -1,5 +1,6 @@
 const {
   Client,
+  Events,
   GatewayIntentBits,
   REST,
   Routes,
@@ -101,7 +102,15 @@ function resolveIncident(service) {
   console.log(`✅ Incident resolved: ${service}`);
 }
 
-client.once('ready', async () => {
+process.on('unhandledRejection', err => {
+  console.error('UNHANDLED REJECTION:', err);
+});
+
+process.on('uncaughtException', err => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+});
+
+client.on(Events.ClientReady, readyClient, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
   client.user.setActivity({
@@ -124,14 +133,6 @@ client.once('ready', async () => {
   setInterval(() => {
     console.log(`✅ Ping: ${client.ws.ping.toFixed(2)}ms`);
   }, 30000);
-});
-
-process.on('unhandledRejection', err => {
-  console.error('UNHANDLED REJECTION:', err);
-});
-
-process.on('uncaughtException', err => {
-  console.error('UNCAUGHT EXCEPTION:', err);
 });
 
 client.on('guildCreate', guild => {
