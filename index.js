@@ -70,6 +70,9 @@ function now() {
   return new Date().toISOString();
 }
 
+console.log('TOKEN exists:', !!process.env.TOKEN);
+console.log('CLIENT_ID exists:', !!process.env.CLIENT_ID);
+
 function createIncident(service, title) {
   const active = incidents.find(
     i => i.service === service && !i.resolvedAt
@@ -109,6 +112,9 @@ process.on('unhandledRejection', err => {
 process.on('uncaughtException', err => {
   console.error('UNCAUGHT EXCEPTION:', err);
 });
+
+console.log('🔑 Logging into Discord...');
+client.login(process.env.TOKEN).catch(console.error);
 
 client.once(Events.ClientReady, async readyClient => {
   console.log(`✅ Logged in as ${client.user.tag}`);
@@ -334,8 +340,3 @@ if (!process.env.TOKEN || !process.env.CLIENT_ID) {
   console.error('❌ Missing TOKEN or CLIENT_ID in .env');
   process.exit(1);
 }
-
-setTimeout(() => {
-  console.log('🔑 Logging into Discord...');
-  client.login(process.env.TOKEN);
-}, 1000);
