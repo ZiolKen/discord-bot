@@ -114,7 +114,12 @@ process.on('uncaughtException', err => {
 });
 
 console.log('🔑 Logging into Discord...');
-client.login(process.env.TOKEN).catch(console.error);
+client.login(process.env.TOKEN)
+  .then(() => console.log('🔐 Login request sent to Discord'))
+  .catch(err => {
+    console.error('❌ Discord login failed');
+    console.error(err);
+  });
 
 client.once(Events.ClientReady, async readyClient => {
   console.log(`✅ Logged in as ${client.user.tag}`);
