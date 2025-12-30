@@ -110,7 +110,7 @@ process.on('uncaughtException', err => {
   console.error('UNCAUGHT EXCEPTION:', err);
 });
 
-client.on(Events.ClientReady, readyClient, async () => {
+client.once(Events.ClientReady, async readyClient => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 
   client.user.setActivity({
