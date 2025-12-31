@@ -160,7 +160,9 @@ client.on('interactionCreate', async interaction => {
   services.commands = 'online';
   resolveIncident('commands');
   try {
-  await interaction.deferReply({ ephemeral: false });
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferReply({ ephemeral: false });
+  }
   const { commandName } = interaction;
     if (commandName === 'ping') {
       const ping = client.ws.ping;
@@ -258,7 +260,7 @@ client.on('interactionCreate', async interaction => {
       console.log(`[${timestamp}] ${username} (ID: ${userId}) used /serverlist`);
 
       if (userId !== '951037699320602674') {
-        await interaction.editReply({ content: '🚫 You do not have permission to use this command.', ephemeral: true });
+        await interaction.editReply({ content: '🚫 You do not have permission to use this command.'});
         return;
       }
 
@@ -276,7 +278,9 @@ client.on('interactionCreate', async interaction => {
     }
   } catch (err) {
     if (interaction.deferred || interaction.replied) {
-      await interaction.editReply({ content: '⚠️ Command error.' }).catch(() => {});
+      try {
+        await interaction.editReply({ content: '⚠️ Command error.' });
+      } catch {}
     }
     if (err.code === 10062) {
       console.warn('⚠️ Interaction expired, ignoring.');
