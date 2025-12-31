@@ -14,6 +14,12 @@ const fs = require('fs');
 const crypto = require('crypto');
 require('dotenv').config();
 
+// ==== START BOT ====
+if (!process.env.TOKEN || !process.env.CLIENT_ID) {
+  console.error('❌ Missing TOKEN or CLIENT_ID in .env');
+  process.exit(1);
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -69,9 +75,6 @@ const incidents = [];
 function now() {
   return new Date().toISOString();
 }
-
-console.log('TOKEN exists:', !!process.env.TOKEN);
-console.log('CLIENT_ID exists:', !!process.env.CLIENT_ID);
 
 function createIncident(service, title) {
   const active = incidents.find(
@@ -137,14 +140,6 @@ client.once(Events.ClientReady, async readyClient => {
     console.log(`✅ Ping: ${client.ws.ping.toFixed(2)}ms`);
   }, 30000);
 });
-
-console.log('🔑 Logging into Discord...');
-client.login(process.env.TOKEN)
-  .then(() => console.log('🔐 Login request sent to Discord'))
-  .catch(err => {
-    console.error('❌ Discord login failed');
-    console.error(err);
-  });
   
 client.on('guildCreate', guild => {
   console.log(`✅ Joined new server: ${guild.name} (ID: ${guild.id})`);
@@ -165,6 +160,7 @@ client.on('interactionCreate', async interaction => {
   services.commands = 'online';
   resolveIncident('commands');
   try {
+  await interaction.deferReply();
   const { commandName } = interaction;
     if (commandName === 'ping') {
       const ping = client.ws.ping;
@@ -177,7 +173,7 @@ client.on('interactionCreate', async interaction => {
         .setThumbnail('https://raw.githubusercontent.com/ZiolKen/discord-bot-status/main/assets/ico.png')
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
 
     else if (commandName === 'info') {
@@ -200,7 +196,7 @@ client.on('interactionCreate', async interaction => {
         .setThumbnail(botUser.displayAvatarURL())
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
 
     else if (commandName === 'serverinfo') {
@@ -219,7 +215,7 @@ client.on('interactionCreate', async interaction => {
         .setThumbnail(guild.iconURL({ dynamic: true }))
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
 
     else if (commandName === 'userinfo') {
@@ -238,7 +234,7 @@ client.on('interactionCreate', async interaction => {
         .setThumbnail(user.displayAvatarURL({ size: 1024 }))
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
 
     else if (commandName === 'credit') {
@@ -251,7 +247,7 @@ client.on('interactionCreate', async interaction => {
         .setThumbnail(client.user.displayAvatarURL())
         .setTimestamp();
 
-      await interaction.reply({ embeds: [embed] });
+      await interaction.editReply({ embeds: [embed] });
     }
     
     else if (commandName === 'serverlist') {
@@ -262,7 +258,7 @@ client.on('interactionCreate', async interaction => {
       console.log(`[${timestamp}] ${username} (ID: ${userId}) used /serverlist`);
 
       if (userId !== '951037699320602674') {
-        await interaction.reply({ content: '🚫 You do not have permission to use this command.', ephemeral: true });
+        await interaction.editReply({ content: '🚫 You do not have permission to use this command.', ephemeral: true });
         return;
       }
 
@@ -275,19 +271,16 @@ client.on('interactionCreate', async interaction => {
         await interaction.reply({ content: '📄 Server list is too long, see the attached file:', files: [filename] });
         fs.unlinkSync(filename);
       } else {
-        await interaction.reply(`🤖 The bot is currently in these servers:\n${serverListStr}`);
+        await interaction.editReply(`🤖 The bot is currently in these servers:\n${serverListStr}`);
       }
     }
   } catch (err) {
     console.error('❌ Command error:', err);
     services.commands = 'offline';
     createIncident('commands', 'Command execution failed');
-
-    if (!interaction.replied) {
-      await interaction.reply({
-        content: '⚠️ Command error.',
-        ephemeral: true
-      });
+  
+    if (interaction.deferred || interaction.replied) {
+      await interaction.editReply({ content: '⚠️ Command error.' }).catch(() => {});
     }
   }
 });
@@ -335,13 +328,17 @@ app.get('/incidents', (req, res) => {
   );
 });
 
+console.log('TOKEN exists:', !!process.env.TOKEN);
+console.log('CLIENT_ID exists:', !!process.env.CLIENT_ID);
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🌐 Express server running at http://localhost:${PORT}`);
+  console.log('🔑 Logging into Discord...');
+  client.login(process.env.TOKEN)
+    .then(() => console.log('🔐 Login request sent to Discord'))
+    .catch(err => {
+      console.error('❌ Discord login failed');
+      console.error(err);
+    });
 });
-
-// ==== START BOT ====
-if (!process.env.TOKEN || !process.env.CLIENT_ID) {
-  console.error('❌ Missing TOKEN or CLIENT_ID in .env');
-  process.exit(1);
-}
