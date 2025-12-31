@@ -160,7 +160,7 @@ client.on('interactionCreate', async interaction => {
   services.commands = 'online';
   resolveIncident('commands');
   try {
-  await interaction.deferReply();
+  await interaction.deferReply({ ephemeral: false });
   const { commandName } = interaction;
     if (commandName === 'ping') {
       const ping = client.ws.ping;
@@ -268,19 +268,23 @@ client.on('interactionCreate', async interaction => {
       if (serverListStr.length > 1900) {
         const filename = 'serverlist.txt';
         fs.writeFileSync(filename, serverListStr, { encoding: 'utf8' });
-        await interaction.reply({ content: '📄 Server list is too long, see the attached file:', files: [filename] });
+        await interaction.editReply({ content: '📄 Server list is too long, see the attached file:', files: [filename] });
         fs.unlinkSync(filename);
       } else {
         await interaction.editReply(`🤖 The bot is currently in these servers:\n${serverListStr}`);
       }
     }
   } catch (err) {
-    console.error('❌ Command error:', err);
-    services.commands = 'offline';
-    createIncident('commands', 'Command execution failed');
-  
     if (interaction.deferred || interaction.replied) {
       await interaction.editReply({ content: '⚠️ Command error.' }).catch(() => {});
+    }
+    if (err.code === 10062) {
+      console.warn('⚠️ Interaction expired, ignoring.');
+      return;
+    } else {
+      console.error('❌ Command error:', err);
+      services.commands = 'offline';
+      createIncident('commands', 'Command execution failed');
     }
   }
 });
