@@ -1,14 +1,28 @@
 const { Pool } = require("pg");
 
-function buildSSL() {
-  const caRaw = process.env.AIVEN_CA_CERT;
-  if (!caRaw) return { rejectUnauthorized: true };
-  return { ca: caRaw.replace(/\\n/g, "\n"), rejectUnauthorized: true };
+function buildSsl() {
+  const caRaw = process.env.PG_CA_CERT || process.env.AIVEN_CA_CERT;
+
+  if (!caRaw || !caRaw.trim()) {
+    throw new Error("Missing PG_CA_CERT (Aiven CA certificate).");
+  }
+
+  return {
+    ca: caRaw.replace(/\\n/g, "\n"),
+    rejectUnauthorized: true,
+  };
 }
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: buildSSL(),
+  ssl: buildSsl(),
+  max: 5,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
 });
 
-module.exports = { pool };
+async function query(text, params) {
+  return pool.query(text, params);
+}
+
+module.exports = { pool, query };
