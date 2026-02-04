@@ -1,7 +1,9 @@
 const { Pool } = require('pg');
 
 function buildSsl() {
-  const ca = process.env.PG_CA_CERT;
+  const raw = process.env.PG_CA_CERT;
+  const ca = raw ? raw.replace(/\\n/g, '\n') : null;
+
   if (ca && ca.trim().length > 0) {
     return { ca, rejectUnauthorized: true };
   }
