@@ -3,6 +3,13 @@ const db = require('../db');
 const cooldown = new Map();
 const COOLDOWN_MS = 45_000;
 
+function cleanupCooldown(maxAgeMs = 6 * 60 * 60_000) {
+  const now = Date.now();
+  for (const [k, t] of cooldown.entries()) {
+    if (now - t > maxAgeMs) cooldown.delete(k);
+  }
+}
+
 function xpForNext(level) {
   return 5 * (level * level) + 50 * level + 100;
 }
@@ -40,4 +47,31 @@ async function addXp(guildId, userId, amount) {
   return { xp, level, leveledUp };
 }
 
-module.exports = { addXp, xpForNext };
+async function getRank(guildId, userId) {
+  const { rows } = await db.query(
+    `SELECT user_id, xp, level, rank FROM (
+       SELECT user_id, xp, level,
+              RANK() OVER (ORDER BY level DESC, xp DESC) AS rank
+       FROM user_stats
+       WHERE guild_id=$1
+     ) t
+     WHERE user_id=$2
+     LIMIT 1`,
+    [guildId, userId]
+  );
+  return rows[0] || null;
+}
+
+async function getLeaderboard(guildId, limit = 10) {
+  const { rows } = await db.query(
+    `SELECT user_id, xp, level
+     FROM user_stats
+     WHERE guild_id=$1
+     ORDER BY level DESC, xp DESC
+     LIMIT $2`,
+    [guildId, limit]
+  );
+  return rows;
+}
+
+module.exports = { addXp, xpForNext, getRank, getLeaderboard, cleanupCooldown };

@@ -23,19 +23,53 @@ async function getGuildSettings(guildId) {
 }
 
 async function setGuildSetting(guildId, patch) {
-  const keys = Object.keys(patch || {});
-  if (keys.length === 0) return getGuildSettings(guildId);
+  const incoming = Object.keys(patch || {});
+  if (incoming.length === 0) return getGuildSettings(guildId);
 
-  const sets = keys.map((k, i) => `${k}=$${i + 2}`).join(', ');
-  const values = keys.map(k => patch[k]);
+  const allowed = new Set([
+    'prefix',
+    'log_channel_id',
+    'welcome_channel_id',
+    'welcome_enabled',
+    'autorole_id',
+    'am_enabled',
+    'am_antilink',
+    'am_antispam',
+    'am_antimention',
+    'am_caps',
+    'am_badwords',
+    'am_raid',
+    'am_action',
+    'am_timeout_sec',
+    'am_max_mentions',
+    'am_caps_ratio',
+    'am_min_acc_age_days',
+    'leveling_enabled'
+  ]);
+
+  const keys = incoming.filter(k => allowed.has(k));
+  if (keys.length !== incoming.length) {
+    const bad = incoming.filter(k => !allowed.has(k));
+    throw new Error(`Invalid guild setting keys: ${bad.join(', ')}`);
+  }
+
+  const cols = ['guild_id', ...keys];
+  const placeholders = cols.map((_, i) => `$${i + 1}`).join(', ');
+  const updates = keys.map(k => `${k}=EXCLUDED.${k}`).join(', ');
+  const values = [guildId, ...keys.map(k => patch[k])];
 
   const { rows } = await db.query(
-    `UPDATE guild_settings SET ${sets} WHERE guild_id=$1 RETURNING *`,
-    [guildId, ...values]
+    `INSERT INTO guild_settings (${cols.join(', ')})
+     VALUES (${placeholders})
+     ON CONFLICT (guild_id) DO UPDATE SET ${updates}
+     RETURNING *`,
+    values
   );
-  cache.set(guildId, rows[0]);
+
+  const s = rows[0];
+  cache.set(guildId, s);
   meta.set(guildId, Date.now());
-  return rows[0];
+  return s;
 }
 
 module.exports = { getGuildSettings, setGuildSetting };
