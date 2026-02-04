@@ -1,14 +1,17 @@
 const { Pool } = require("pg");
+const fs = require("fs");
 
 function buildSsl() {
-  const caRaw = process.env.PG_CA_CERT || process.env.AIVEN_CA_CERT;
+  const caPath = "/etc/secrets/ca.pem";
 
-  if (!caRaw || !caRaw.trim()) {
-    throw new Error("Missing PG_CA_CERT (Aiven CA certificate).");
+  if (!fs.existsSync(caPath)) {
+    throw new Error(`Missing CA file at ${caPath}`);
   }
 
+  const ca = fs.readFileSync(caPath, "utf8");
+
   return {
-    ca: caRaw.replace(/\\n/g, "\n"),
+    ca,
     rejectUnauthorized: true,
   };
 }
