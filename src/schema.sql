@@ -3,6 +3,8 @@ CREATE TABLE IF NOT EXISTS guild_settings (
   prefix          TEXT NOT NULL DEFAULT '!',
   log_channel_id  TEXT,
 
+  leveling_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+
   -- Welcome placeholder
   welcome_channel_id TEXT,
   welcome_enabled BOOLEAN NOT NULL DEFAULT FALSE,
@@ -53,6 +55,38 @@ CREATE TABLE IF NOT EXISTS reminders (
   channel_id TEXT NOT NULL,
   guild_id   TEXT,
   remind_at  TIMESTAMPTZ NOT NULL,
-  text       TEXT NOT NULL
+  text       TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'pending',
+  attempts   INT  NOT NULL DEFAULT 0,
+  locked_at  TIMESTAMPTZ,
+  locked_by  TEXT,
+  last_error TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_reminders_time ON reminders(remind_at);
+CREATE INDEX IF NOT EXISTS idx_reminders_pending ON reminders(status, remind_at);
+
+CREATE TABLE IF NOT EXISTS bot_users (
+  user_id    TEXT PRIMARY KEY,
+  first_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_bot_users_last_seen ON bot_users(last_seen);
+
+CREATE TABLE IF NOT EXISTS bot_user_guilds (
+  guild_id   TEXT NOT NULL,
+  user_id    TEXT NOT NULL,
+  first_seen TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (guild_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_bot_user_guilds_last_seen ON bot_user_guilds(last_seen);
+
+ALTER TABLE guild_settings ADD COLUMN IF NOT EXISTS leveling_enabled BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS attempts INT NOT NULL DEFAULT 0;
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ;
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS locked_by TEXT;
+ALTER TABLE reminders ADD COLUMN IF NOT EXISTS last_error TEXT;
+
+CREATE INDEX IF NOT EXISTS idx_reminders_pending ON reminders(status, remind_at);
