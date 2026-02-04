@@ -2,12 +2,16 @@ const utilities = require('./utilities');
 const moderation = require('./moderation');
 const security = require('./security');
 const minigames = require('./minigames');
+const levels = require('./levels');
+const owner = require('./owner');
 
 const all = [
   ...utilities,
   ...moderation,
   ...security,
-  ...minigames
+  ...minigames,
+  ...levels,
+  ...owner
 ];
 
 function buildSlashJSON() {

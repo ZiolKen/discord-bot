@@ -5,7 +5,8 @@ const {
 } = require('discord.js');
 const { getGuildSettings, setGuildSetting } = require('../services/guildSettings');
 const { parseDuration, toDiscordTs } = require('../utils/time');
-const { createReminder, listReminders } = require('../services/reminders');
+const { createReminder, listReminders, cancelReminder } = require('../services/reminders');
+const { calculate } = require('../utils/calc');
 
 module.exports = [
   {
@@ -114,6 +115,109 @@ module.exports = [
     prefix: {
       async run(message, args, ctx) {
         return message.reply(`⏱️ Uptime: **${ctx.uptime()}**`);
+      }
+    }
+  },
+
+  {
+    name: 'choose',
+    category: 'utilities',
+    description: 'Pick a random option',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('choose')
+        .setDescription('Pick a random option')
+        .addStringOption(o => o.setName('options').setDescription('Separate options with | or ,').setRequired(true)),
+      async run(interaction) {
+        const raw = interaction.options.getString('options');
+        const parts = raw.split(/[|,]/g).map(s => s.trim()).filter(Boolean);
+        if (parts.length < 2) return interaction.reply({ content: 'Provide at least 2 options.', ephemeral: true });
+        const pick = parts[Math.floor(Math.random() * parts.length)];
+        return interaction.reply(`🎯 ${pick}`);
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        const raw = args.join(' ');
+        const parts = raw.split(/[|,]/g).map(s => s.trim()).filter(Boolean);
+        if (parts.length < 2) return message.reply('Usage: `!choose a | b | c`');
+        const pick = parts[Math.floor(Math.random() * parts.length)];
+        return message.reply(`🎯 ${pick}`);
+      }
+    }
+  },
+
+  {
+    name: 'calc',
+    category: 'utilities',
+    description: 'Calculate a math expression',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('calc')
+        .setDescription('Calculate a math expression')
+        .addStringOption(o => o.setName('expression').setDescription('Example: (2+3)*4').setRequired(true)),
+      async run(interaction) {
+        const expr = interaction.options.getString('expression');
+        try {
+          const r = calculate(expr);
+          return interaction.reply(`🧮 ${expr} = **${r}**`);
+        } catch {
+          return interaction.reply({ content: 'Invalid expression.', ephemeral: true });
+        }
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        const expr = args.join(' ');
+        if (!expr) return message.reply('Usage: `!calc <expression>`');
+        try {
+          const r = calculate(expr);
+          return message.reply(`🧮 ${expr} = **${r}**`);
+        } catch {
+          return message.reply('Invalid expression.');
+        }
+      }
+    }
+  },
+
+  {
+    name: 'base64',
+    category: 'utilities',
+    description: 'Base64 encode/decode',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('base64')
+        .setDescription('Base64 encode/decode')
+        .addSubcommand(s => s.setName('encode').setDescription('Encode text').addStringOption(o => o.setName('text').setDescription('Text').setRequired(true)))
+        .addSubcommand(s => s.setName('decode').setDescription('Decode base64').addStringOption(o => o.setName('text').setDescription('Base64 text').setRequired(true))),
+      async run(interaction) {
+        const sub = interaction.options.getSubcommand();
+        const text = interaction.options.getString('text');
+        try {
+          const out = sub === 'encode'
+            ? Buffer.from(text, 'utf8').toString('base64')
+            : Buffer.from(text, 'base64').toString('utf8');
+          if (out.length > 1800) return interaction.reply({ content: 'Output too long.', ephemeral: true });
+          return interaction.reply(`\`\`\`\n${out}\n\`\`\``);
+        } catch {
+          return interaction.reply({ content: 'Invalid input.', ephemeral: true });
+        }
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        const sub = String(args[0] || '').toLowerCase();
+        const text = args.slice(1).join(' ');
+        if (!['encode', 'decode'].includes(sub) || !text) return message.reply('Usage: `!base64 encode|decode <text>`');
+        try {
+          const out = sub === 'encode'
+            ? Buffer.from(text, 'utf8').toString('base64')
+            : Buffer.from(text, 'base64').toString('utf8');
+          if (out.length > 1800) return message.reply('Output too long.');
+          return message.reply(`\`\`\`\n${out}\n\`\`\``);
+        } catch {
+          return message.reply('Invalid input.');
+        }
       }
     }
   },
@@ -508,6 +612,206 @@ module.exports = [
   },
 
   {
+    name: 'remindcancel',
+    category: 'utilities',
+    description: 'Cancel a reminder by ID',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('remindcancel')
+        .setDescription('Cancel one of your reminders')
+        .addIntegerOption(o => o.setName('id').setDescription('Reminder ID').setRequired(true)),
+      async run(interaction) {
+        const id = interaction.options.getInteger('id');
+        const ok = await cancelReminder(interaction.user.id, id);
+        return interaction.reply({ content: ok ? `✅ Reminder #${id} cancelled.` : `⚠️ Reminder #${id} not found.`, ephemeral: true });
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        const id = Number(args[0]);
+        if (!Number.isFinite(id)) return message.reply('Usage: `!remindcancel <id>`');
+        const ok = await cancelReminder(message.author.id, id);
+        return message.reply(ok ? `✅ Reminder #${id} cancelled.` : `⚠️ Reminder #${id} not found.`);
+      }
+    }
+  },
+
+  {
+    name: 'choose',
+    aliases: ['pick'],
+    category: 'utilities',
+    description: 'Pick a random option',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('choose')
+        .setDescription('Pick a random option')
+        .addStringOption(o => o.setName('options').setDescription('Comma or | separated options').setRequired(true)),
+      async run(interaction) {
+        const raw = interaction.options.getString('options');
+        const parts = raw.split(/\s*(?:\||,)\s*/).filter(Boolean);
+        if (parts.length < 2) return interaction.reply({ content: 'Provide at least 2 options.', ephemeral: true });
+        const pick = parts[Math.floor(Math.random() * parts.length)];
+        return interaction.reply(`🎲 I choose: **${pick}**`);
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        const raw = args.join(' ');
+        const parts = raw.split(/\s*(?:\||,)\s*/).filter(Boolean);
+        if (parts.length < 2) return message.reply('Usage: `!choose a|b|c` (at least 2 options)');
+        const pick = parts[Math.floor(Math.random() * parts.length)];
+        return message.reply(`🎲 I choose: **${pick}**`);
+      }
+    }
+  },
+
+  {
+    name: 'calc',
+    category: 'utilities',
+    description: 'Calculate a math expression',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('calc')
+        .setDescription('Calculate a math expression')
+        .addStringOption(o => o.setName('expr').setDescription('Expression, e.g. (2+3)*4').setRequired(true)),
+      async run(interaction) {
+        const expr = interaction.options.getString('expr');
+        try {
+          const v = calculate(expr);
+          return interaction.reply(`🧮 ${expr} = **${v}**`);
+        } catch {
+          return interaction.reply({ content: 'Invalid expression.', ephemeral: true });
+        }
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        const expr = args.join(' ');
+        if (!expr) return message.reply('Usage: `!calc <expression>`');
+        try {
+          const v = calculate(expr);
+          return message.reply(`🧮 ${expr} = **${v}**`);
+        } catch {
+          return message.reply('Invalid expression.');
+        }
+      }
+    }
+  },
+
+  {
+    name: 'base64',
+    category: 'utilities',
+    description: 'Base64 encode/decode',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('base64')
+        .setDescription('Base64 encode/decode')
+        .addStringOption(o => o.setName('mode').setDescription('encode or decode').setRequired(true).addChoices(
+          { name: 'encode', value: 'encode' },
+          { name: 'decode', value: 'decode' }
+        ))
+        .addStringOption(o => o.setName('text').setDescription('Input text').setRequired(true)),
+      async run(interaction) {
+        const mode = interaction.options.getString('mode');
+        const text = interaction.options.getString('text');
+        try {
+          const out = mode === 'encode'
+            ? Buffer.from(text, 'utf8').toString('base64')
+            : Buffer.from(text, 'base64').toString('utf8');
+          return interaction.reply({ content: out.length > 1900 ? `Output too long (${out.length} chars).` : `\`${out}\``, ephemeral: true });
+        } catch {
+          return interaction.reply({ content: 'Invalid input.', ephemeral: true });
+        }
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        const mode = String(args[0] || '').toLowerCase();
+        const text = args.slice(1).join(' ');
+        if (!['encode', 'decode'].includes(mode) || !text) return message.reply('Usage: `!base64 encode|decode <text>`');
+        try {
+          const out = mode === 'encode'
+            ? Buffer.from(text, 'utf8').toString('base64')
+            : Buffer.from(text, 'base64').toString('utf8');
+          return message.reply(out.length > 1900 ? `Output too long (${out.length} chars).` : `\`${out}\``);
+        } catch {
+          return message.reply('Invalid input.');
+        }
+      }
+    }
+  },
+
+  {
+    name: 'avatar',
+    category: 'utilities',
+    description: 'Show a user avatar',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('avatar')
+        .setDescription('Show a user avatar')
+        .addUserOption(o => o.setName('user').setDescription('User').setRequired(false)),
+      async run(interaction) {
+        const user = interaction.options.getUser('user') || interaction.user;
+        return interaction.reply(user.displayAvatarURL({ size: 1024 }));
+      }
+    },
+    prefix: {
+      async run(message) {
+        return message.reply(message.author.displayAvatarURL({ size: 1024 }));
+      }
+    }
+  },
+
+  {
+    name: 'snipe',
+    category: 'utilities',
+    description: 'Show last deleted message in this channel',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('snipe')
+        .setDescription('Show last deleted message in this channel')
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
+      async run(interaction, ctx) {
+        const sn = ctx.snipeCache.get(interaction.channelId);
+        if (!sn) return interaction.reply({ content: 'Nothing to snipe.', ephemeral: true });
+        return interaction.reply({ content: `🕵️ ${sn.authorTag}: ${sn.content}`, allowedMentions: { parse: [] }, ephemeral: true });
+      }
+    },
+    prefix: {
+      async run(message, _args, ctx) {
+        if (!message.member.permissions.has(PermissionFlagsBits.ManageMessages)) return message.reply('🚫 You need **Manage Messages**.');
+        const sn = ctx.snipeCache.get(message.channelId);
+        if (!sn) return message.reply('Nothing to snipe.');
+        return message.reply({ content: `🕵️ ${sn.authorTag}: ${sn.content}`, allowedMentions: { parse: [] } });
+      }
+    }
+  },
+
+  {
+    name: 'afk',
+    category: 'utilities',
+    description: 'Set an AFK status',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('afk')
+        .setDescription('Set AFK status')
+        .addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(false)),
+      async run(interaction, ctx) {
+        const reason = interaction.options.getString('reason') || 'AFK';
+        ctx.afkMap.set(`${interaction.guildId}:${interaction.user.id}`, { reason, since: Date.now() });
+        return interaction.reply({ content: `💤 You are now AFK: **${reason}**`, ephemeral: true });
+      }
+    },
+    prefix: {
+      async run(message, args, ctx) {
+        const reason = args.join(' ') || 'AFK';
+        ctx.afkMap.set(`${message.guild.id}:${message.author.id}`, { reason, since: Date.now() });
+        return message.reply(`💤 You are now AFK: **${reason}**`);
+      }
+    }
+  },
+
+  {
     name: 'say',
     category: 'utilities',
     description: 'Make the bot say something',
@@ -520,7 +824,7 @@ module.exports = [
       async run(interaction) {
         const text = interaction.options.getString('text');
         await interaction.reply({ content: '✅ Sent.', ephemeral: true });
-        return interaction.channel.send({ content: text });
+        return interaction.channel.send({ content: text, allowedMentions: { parse: [] } });
       }
     },
     prefix: {
@@ -528,7 +832,7 @@ module.exports = [
         if (!message.member.permissions.has(PermissionFlagsBits.ManageMessages)) return message.reply('🚫 You need **Manage Messages**.');
         const text = args.join(' ');
         if (!text) return message.reply('Usage: `!say <text>`');
-        return message.channel.send({ content: text });
+        return message.channel.send({ content: text, allowedMentions: { parse: [] } });
       }
     }
   }
