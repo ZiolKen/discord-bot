@@ -1,15 +1,32 @@
 # Discord Bot
 
-<p align="left">
-  <img src="https://files.catbox.moe/ztyeik.png" alt="Image" width="50%" />
-</p>
+A real utilities-style Discord bot with:
+- Slash commands **/** + Prefix commands (default **!**)
+- Moderation tools (ban/kick/timeout/purge/lock/slowmode/warns)
+- Utilities (help, info, avatar/banner, server/user/channel/role info, snipe, polls, reminders, timestamps, etc.)
+- Minigames + economy (daily/weekly, balance, leaderboard, blackjack, slots, fishing, trivia, guess)
+- PostgreSQL storage – saves only the necessary stuff.
 
-A bot, ofc.
+## Setup
 
-Bot Status:
-- https://botstatus.vercel.app/
+1) Install deps:
+```bash
+npm install
+```
 
-Invite Bot:
-- https://discord.com/oauth2/authorize?client_id=1398238289500307578&scope=bot&permissions=8
+2) Create DB schema:
+- Open Aiven SQL editor and run `src/schema.sql`
 
-@ジオルケン | @ZiolKen
+3) Environment variables:
+- `TOKEN`
+- `CLIENT_ID`
+- `DATABASE_URL`
+- `PG_CA_CERT` (recommended): paste CA certificate to enforce verify-full
+
+4) Start:
+```bash
+npm start
+```
+
+## Notes
+- Automod is **OFF by default**. Enable via `/automod toggle enabled` or `!automod toggle enabled`.
