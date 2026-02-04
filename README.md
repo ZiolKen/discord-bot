@@ -15,7 +15,7 @@ npm install
 ```
 
 2) Create DB schema:
-- Open Aiven SQL editor and run `src/schema.sql`
+- Open SQL editor and run `src/schema.sql`
 
 3) Environment variables:
 - `TOKEN`
