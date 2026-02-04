@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: discord-utils-bot
-    runtime: docker
-    plan: free
-    autoDeploy: true
-    healthCheckPath: /
