@@ -1,0 +1,20 @@
+{
+  "name": "discord-bot",
+  "version": "1.2.7",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": "20.19.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.25.1",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "cors": "^2.8.5",
+    "winston": "^3.19.0",
+    "bufferutil": "^4.0.9",
+    "zlib-sync": "^0.1.10"
+  }
+}
