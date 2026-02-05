@@ -1,6 +1,7 @@
 const {
   SlashCommandBuilder,
   EmbedBuilder,
+  AttachmentBuilder,
   PermissionFlagsBits
 } = require('discord.js');
 const { getGuildSettings, setGuildSetting } = require('../services/guildSettings');
@@ -529,6 +530,148 @@ module.exports = [
         const text = args.join(' ');
         if (!text) return message.reply('Usage: `!say <text>`');
         return message.channel.send({ content: text });
+      }
+    }
+  },
+  
+  {
+    name: 'afk',
+    category: 'utilities',
+    description: 'Set your AFK status',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('afk')
+        .setDescription('Set your AFK status')
+        .addStringOption(o => o.setName('reason').setDescription('Reason').setRequired(false)),
+      async run(interaction, ctx) {
+        const reason = interaction.options.getString('reason') || 'AFK';
+        ctx.afkMap.set(`${interaction.guildId}:${interaction.user.id}`, { reason, since: Date.now() });
+        return interaction.reply({ content: `💤 You are now AFK: **${reason}**`, ephemeral: true });
+      }
+    },
+    prefix: {
+      async run(message, args, ctx) {
+        const reason = args.join(' ') || 'AFK';
+        ctx.afkMap.set(`${message.guild.id}:${message.author.id}`, { reason, since: Date.now() });
+        return message.reply(`💤 You are now AFK: **${reason}**`);
+      }
+    }
+  },
+
+  {
+    name: 'snipe',
+    category: 'utilities',
+    description: 'Show last deleted message in this channel',
+    slash: {
+      data: new SlashCommandBuilder().setName('snipe').setDescription('Show last deleted message in this channel'),
+      async run(interaction, ctx) {
+        const sn = ctx.snipeCache.get(interaction.channelId);
+        if (!sn) return interaction.reply({ content: 'Nothing to snipe.', ephemeral: true });
+        return interaction.reply(`🕵️ Last deleted message by **${sn.authorTag}**: ${sn.content}`);
+      }
+    },
+    prefix: {
+      async run(message, _args, ctx) {
+        const sn = ctx.snipeCache.get(message.channelId);
+        if (!sn) return message.reply('Nothing to snipe.');
+        return message.reply(`🕵️ Last deleted message by **${sn.authorTag}**: ${sn.content}`);
+      }
+    }
+  },
+
+  {
+    name: 'level',
+    category: 'utilities',
+    description: 'Toggle leveling system',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('level')
+        .setDescription('Toggle leveling system')
+        .addStringOption(o =>
+          o.setName('mode')
+            .setDescription('on/off/status')
+            .setRequired(true)
+            .addChoices(
+              { name: 'on', value: 'on' },
+              { name: 'off', value: 'off' },
+              { name: 'status', value: 'status' }
+            )
+        )
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
+      async run(interaction) {
+        const { getGuildSettings, setGuildSetting } = require('../services/guildSettings');
+        const mode = interaction.options.getString('mode');
+        if (mode === 'status') {
+          const s = await getGuildSettings(interaction.guildId);
+          return interaction.reply({ content: `Leveling is **${s.level_enabled ? 'ON' : 'OFF'}**.`, ephemeral: true });
+        }
+        const enabled = mode === 'on';
+        await setGuildSetting(interaction.guildId, { level_enabled: enabled });
+        return interaction.reply({ content: `✅ Leveling is now **${enabled ? 'ON' : 'OFF'}**.`, ephemeral: true });
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        const { getGuildSettings, setGuildSetting } = require('../services/guildSettings');
+        if (!message.member.permissions.has(PermissionFlagsBits.ManageGuild)) return message.reply('🚫 You need **Manage Server**.');
+        const mode = String(args[0] || '').toLowerCase();
+        if (!mode || !['on','off','status'].includes(mode)) return message.reply('Usage: `!level on|off|status`');
+        if (mode === 'status') {
+          const s = await getGuildSettings(message.guild.id);
+          return message.reply(`Leveling is **${s.level_enabled ? 'ON' : 'OFF'}**.`);
+        }
+        const enabled = mode === 'on';
+        await setGuildSetting(message.guild.id, { level_enabled: enabled });
+        return message.reply(`✅ Leveling is now **${enabled ? 'ON' : 'OFF'}**.`);
+      }
+    }
+  },
+
+  {
+    name: 'servers',
+    category: 'utilities',
+    description: 'List servers the bot is in (owner only)',
+    slash: {
+      data: new SlashCommandBuilder().setName('servers').setDescription('List servers the bot is in (owner only)'),
+      async run(interaction, ctx) {
+        const ownerId = process.env.OWNER_ID;
+        if (!ownerId || interaction.user.id !== ownerId) {
+          return interaction.reply({ content: '🚫 Owner only.', ephemeral: true });
+        }
+
+        const guilds = [...ctx.client.guilds.cache.values()]
+          .map(g => ({ name: g.name, id: g.id, members: g.memberCount || 0 }))
+          .sort((a, b) => b.members - a.members);
+
+        const lines = guilds.map((g, i) => `${i + 1}. ${g.name} (${g.id}) members:${g.members}`);
+        const body = lines.join('\n');
+
+        if (body.length <= 1800) {
+          return interaction.reply({ content: `**Servers (${guilds.length})**\n${body}`, ephemeral: true });
+        }
+
+        const buf = Buffer.from(body, 'utf8');
+        const file = new AttachmentBuilder(buf, { name: 'servers.txt' });
+        return interaction.reply({ content: `**Servers (${guilds.length})**`, files: [file], ephemeral: true });
+      }
+    },
+    prefix: {
+      async run(message, _args, ctx) {
+        const ownerId = process.env.OWNER_ID;
+        if (!ownerId || message.author.id !== ownerId) return message.reply('🚫 Owner only.');
+
+        const guilds = [...ctx.client.guilds.cache.values()]
+          .map(g => ({ name: g.name, id: g.id, members: g.memberCount || 0 }))
+          .sort((a, b) => b.members - a.members);
+
+        const lines = guilds.map((g, i) => `${i + 1}. ${g.name} (${g.id}) members:${g.members}`);
+        const body = lines.join('\n');
+
+        if (body.length <= 1900) return message.reply(`**Servers (${guilds.length})**\n${body}`);
+
+        const buf = Buffer.from(body, 'utf8');
+        const file = new AttachmentBuilder(buf, { name: 'servers.txt' });
+        return message.reply({ content: `**Servers (${guilds.length})**`, files: [file] });
       }
     }
   }
