@@ -1,9 +1,50 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { getOrCreate, addCoins, trySpendCoins, setClaim, cooldownReady } = require('../services/economy');
+const { createSession, endSession } = require('../services/gameSessions');
 const db = require('../db');
-const { getOrCreate, addCoins, setClaim, cooldownReady } = require('../services/economy');
 const { toDiscordTs } = require('../utils/time');
 
 function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+
+function buildDeck() {
+  const suits = ['♠', '♥', '♦', '♣'];
+  const ranks = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const deck = [];
+  for (const s of suits) {
+    for (const r of ranks) {
+      const v = r === 'A' ? 11 : ['J','Q','K'].includes(r) ? 10 : parseInt(r, 10);
+      deck.push({ r, s, v });
+    }
+  }
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = rand(0, i);
+    const t = deck[i];
+    deck[i] = deck[j];
+    deck[j] = t;
+  }
+  return deck;
+}
+
+function handScore(hand) {
+  let s = hand.reduce((a, c) => a + c.v, 0);
+  let aces = hand.filter(c => c.r === 'A').length;
+  while (s > 21 && aces > 0) {
+    s -= 10;
+    aces -= 1;
+  }
+  return s;
+}
+
+function fmtHand(hand) {
+  return hand.map(c => `${c.r}${c.s}`).join(' ');
+}
+
+function disableRows(rows) {
+  return (rows || []).map(r => {
+    const comps = (r.components || []).map(b => ButtonBuilder.from(b).setDisabled(true));
+    return new ActionRowBuilder().addComponents(...comps);
+  });
+}
 
 async function ensureRow(guildId, userId) {
   return getOrCreate(guildId, userId);
@@ -17,6 +58,7 @@ async function canClaim(field, row, ms) {
 module.exports = [
   {
     name: 'coinflip',
+    aliases: ['cf'],
     category: 'minigames',
     description: 'Flip a coin',
     slash: {
@@ -87,7 +129,7 @@ module.exports = [
 
   {
     name: 'balance',
-    aliases: ['bal'],
+    aliases: ['bal','cash','coin','coins','money'],
     category: 'minigames',
     description: 'Show your coin balance',
     slash: {
@@ -105,6 +147,7 @@ module.exports = [
 
   {
     name: 'daily',
+    aliases: ['dl'],
     category: 'minigames',
     description: 'Claim daily coins',
     slash: {
@@ -140,6 +183,7 @@ module.exports = [
 
   {
     name: 'weekly',
+    aliases: ['wl'],
     category: 'minigames',
     description: 'Claim weekly coins',
     slash: {
@@ -203,6 +247,7 @@ module.exports = [
 
   {
     name: 'gamble',
+    aliases: ['gb'],
     category: 'minigames',
     description: 'Gamble coins (50/50)',
     slash: {
@@ -239,6 +284,7 @@ module.exports = [
 
   {
     name: 'slots',
+    aliases: ['sl'],
     category: 'minigames',
     description: 'Slot machine',
     slash: {
@@ -513,66 +559,4 @@ module.exports = [
     } }
   },
 
-  {
-    name: 'trivia',
-    category: 'minigames',
-    description: 'Trivia question (quick)',
-    slash: {
-      data: new SlashCommandBuilder().setName('trivia').setDescription('Trivia question (answer within 20s)'),
-      async run(interaction) {
-        const bank = [
-          { q: 'What is the capital of Japan?', a: 'tokyo' },
-          { q: 'How many continents are there?', a: '7' },
-          { q: 'What planet is known as the Red Planet?', a: 'mars' },
-          { q: 'In computing, what does CPU stand for?', a: 'central processing unit' },
-          { q: 'What is 9 * 7?', a: '63' }
-        ];
-        const pick = bank[rand(0, bank.length-1)];
-        await interaction.reply(`🧠 Trivia: **${pick.q}**\nReply in chat within **20 seconds**!`);
-
-        const filter = m => m.author.id === interaction.user.id;
-        const col = interaction.channel.createMessageCollector({ filter, time: 20_000, max: 1 });
-        col.on('collect', async (m) => {
-          const ans = m.content.trim().toLowerCase();
-          if (ans === pick.a) {
-            const reward = 120;
-            await addCoins(interaction.guildId, interaction.user.id, reward);
-            await m.reply(`✅ Correct! +**${reward}** coins.`);
-          } else {
-            await m.reply(`❌ Nope. Correct answer: **${pick.a}**`);
-          }
-        });
-        col.on('end', async (c) => {
-          if (c.size === 0) await interaction.followUp({ content: `⏱️ Time's up. Answer was: **${pick.a}**`, ephemeral: true }).catch(()=>{});
-        });
-      }
-    },
-    prefix: { async run(message) {
-      const bank = [
-        { q: 'What is the capital of Japan?', a: 'tokyo' },
-        { q: 'How many continents are there?', a: '7' },
-        { q: 'What planet is known as the Red Planet?', a: 'mars' },
-        { q: 'In computing, what does CPU stand for?', a: 'central processing unit' },
-        { q: 'What is 9 * 7?', a: '63' }
-      ];
-      const pick = bank[rand(0, bank.length-1)];
-      await message.reply(`🧠 Trivia: **${pick.q}**\nReply within **20 seconds**!`);
-
-      const filter = m => m.author.id === message.author.id;
-      const col = message.channel.createMessageCollector({ filter, time: 20_000, max: 1 });
-      col.on('collect', async (m) => {
-        const ans = m.content.trim().toLowerCase();
-        if (ans === pick.a) {
-          const reward = 120;
-          await addCoins(message.guild.id, message.author.id, reward);
-          await m.reply(`✅ Correct! +${reward} coins.`);
-        } else {
-          await m.reply(`❌ Nope. Correct answer: **${pick.a}**`);
-        }
-      });
-      col.on('end', async (c) => {
-        if (c.size === 0) await message.reply(`⏱️ Time's up. Answer was: **${pick.a}**`);
-      });
-    } }
-  }
 ];
