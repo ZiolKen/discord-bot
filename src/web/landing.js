@@ -43,16 +43,29 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
   const avatar = botAvatar ? `<img class="brand__avatar" src="../../assets/logo.png" alt="ジオルケン"/>` : '';
 
   return `<!doctype html>
-<html lang="en">
+<html
+  lang="en"
+  data-bot-name="${safeName}"
+  data-bot-invite="${invite}"
+  data-bot-support="${support}"
+  data-bot-github="https://github.com/ZiolKen/discord-bot"
+  data-bot-status="https://botstatus.vercel.app"
+  data-bot-status-api="/status"
+  data-bot-incidents-api="/incidents"
+  data-bg-image="${LOWPOLY}"
+  translate="no"
+  color-scheme="dark"
+>
+
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="#0b0b10" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
   <link rel="icon" type="image/png" href="../../assets/logo.png" />
   <link rel="shortcut icon" href="../../assets/logo.png" />
-  <link rel="apple-touch-icon" size="180x180" href="../../assets/logo.png" />
-  <meta content="ie=edge" http-equiv="X-UA-Compatible" />
-  <meta name="theme-color" content="#0b0b10" />
+  <link rel="apple-touch-icon" sizes="180x180" href="../../assets/logo.png" />
   <link rel="manifest" href="../../assets/manifest.json" />
   <meta name="description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
   <meta property="og:title" content="ZiolKen Bot" />
@@ -64,273 +77,356 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="ZiolKen Bot" />
   <meta name="twitter:description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
+
   <title>${safeName}</title>
-  <style>
-    :root{
-      --bg:#0f1113;
-      --panel:rgba(15,17,19,.62);
-      --panel2:rgba(15,17,19,.85);
-      --text:#f5f6f7;
-      --muted:rgba(245,246,247,.75);
-      --line:rgba(255,255,255,.12);
-      --accent:#ffffff;
-      --shadow:0 18px 60px rgba(0,0,0,.45);
-      --radius:18px;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      color:var(--text);
-      font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-      background:
-        radial-gradient(1200px 700px at 15% 20%, rgba(255,255,255,.06), transparent 60%),
-        radial-gradient(900px 550px at 80% 25%, rgba(255,255,255,.04), transparent 55%),
-        url('${LOWPOLY}');
-      background-size: cover;
-      background-position: center;
-      background-attachment: fixed;
-    }
-    .wrap{
-      min-height:100%;
-      display:flex;
-      flex-direction:column;
-    }
-    .top{
-      max-width:1100px;
-      margin:0 auto;
-      padding:28px 20px 0;
-      width:100%;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-weight:700;
-      letter-spacing:.02em;
-      text-transform:uppercase;
-      font-size:12px;
-      opacity:.95;
-    }
-    .brand__avatar{
-      width:26px;height:26px;border-radius:999px;
-      border:1px solid var(--line);
-      box-shadow:0 8px 30px rgba(0,0,0,.35);
-    }
-    .nav{
-      display:flex;
-      align-items:center;
-      gap:18px;
-      font-size:13px;
-      opacity:.9;
-    }
-    .nav a{
-      color:var(--text);
-      text-decoration:none;
-      padding:8px 10px;
-      border-radius:999px;
-      transition:background .15s ease, opacity .15s ease;
-    }
-    .nav a:hover{background:rgba(255,255,255,.06)}
-    .nav .cta{
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.04);
-    }
-    .hero{
-      max-width:1100px;
-      margin:0 auto;
-      width:100%;
-      padding:70px 20px 48px;
-      display:grid;
-      grid-template-columns: 1.1fr .9fr;
-      gap:28px;
-      align-items:center;
-      flex:1;
-    }
-    @media (max-width: 900px){
-      .hero{grid-template-columns: 1fr; padding-top:46px}
-      .nav{gap:8px; flex-wrap:wrap; justify-content:flex-end}
-    }
-    .card{
-      background:var(--panel);
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-    .left{
-      padding:36px 34px;
-    }
-    .title{
-      font-size:64px;
-      line-height:1.02;
-      margin:0;
-      letter-spacing:-.03em;
-    }
-    @media (max-width: 520px){
-      .title{font-size:46px}
-      .left{padding:26px 22px}
-    }
-    .subtitle{
-      margin:16px 0 0;
-      font-size:22px;
-      font-weight:600;
-      color:rgba(255,255,255,.9);
-    }
-    .desc{
-      margin:14px 0 0;
-      color:var(--muted);
-      font-size:14px;
-      line-height:1.7;
-      max-width:58ch;
-    }
-    .actions{
-      margin-top:22px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:12px;
-    }
-    .btn{
-      appearance:none;
-      border:1px solid var(--line);
-      background:rgba(255,255,255,.06);
-      color:var(--text);
-      padding:10px 14px;
-      border-radius:12px;
-      text-decoration:none;
-      font-weight:600;
-      font-size:14px;
-      letter-spacing:.01em;
-      transition: transform .12s ease, background .12s ease, border-color .12s ease;
-      user-select:none;
-    }
-    .btn:hover{
-      transform: translateY(-1px);
-      background:rgba(255,255,255,.10);
-      border-color:rgba(255,255,255,.20);
-    }
-    .btn.primary{
-      background:rgba(255,255,255,.14);
-      border-color:rgba(255,255,255,.28);
-    }
-    .right{
-      padding:22px;
-    }
-    .panelTitle{
-      margin:0;
-      font-size:14px;
-      letter-spacing:.02em;
-      text-transform:uppercase;
-      color:rgba(255,255,255,.82);
-    }
-    .kv{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-    }
-    .kv .item{
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px 12px;
-      background:rgba(0,0,0,.18);
-    }
-    .kv .k{
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      color:rgba(255,255,255,.65);
-    }
-    .kv .v{
-      margin-top:6px;
-      font-size:18px;
-      font-weight:700;
-    }
-    .statusbar{
-      max-width:1100px;
-      margin:0 auto;
-      width:100%;
-      padding:0 20px 22px;
-    }
-    .statusInner{
-      display:flex;
-      flex-wrap:wrap;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      padding:12px 14px;
-      background:var(--panel2);
-      border:1px solid var(--line);
-      border-radius:14px;
-      box-shadow:0 12px 45px rgba(0,0,0,.35);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-    }
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      font-size:12px;
-      color:rgba(255,255,255,.85);
-    }
-    .dot{
-      width:9px;height:9px;border-radius:999px;
-      background:#9aa4ad;
-      box-shadow:0 0 0 4px rgba(154,164,173,.12);
-    }
-    .dot.ok{background:#5eea8b; box-shadow:0 0 0 4px rgba(94,234,139,.14)}
-    .dot.bad{background:#ff5d5d; box-shadow:0 0 0 4px rgba(255,93,93,.14)}
-    .muted{color:rgba(255,255,255,.62)}
-    .rightMini{display:flex; gap:14px; flex-wrap:wrap; justify-content:flex-end}
-    .linkish{color:rgba(255,255,255,.9); text-decoration:none; border-bottom:1px solid rgba(255,255,255,.22)}
-    .linkish:hover{border-bottom-color:rgba(255,255,255,.45)}
-  </style>
+
+  <link rel="stylesheet" href="./styles.css" />
 </head>
-<body>
+
+<body autocomplete="off" spellcheck="false">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="bg" aria-hidden="true">
+    <div class="bgImage"></div>
+  </div>
+
   <div class="wrap">
-    <header class="top">
-      <div class="brand">${avatar}<span>${safeName}</span></div>
-      <nav class="nav">
-        <a href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer">Status</a>
-        <a href="${invite}" target="_blank" rel="noopener noreferrer">Invite</a>
-        <a class="cta" href="https://github.com/ZiolKen/discord-bot" target="_blank" rel="noopener noreferrer">Github</a>
-      </nav>
+    <header class="header">
+      <div class="container">
+        <div class="topbar">
+          <a class="brand" href="#home">
+            <img class="mark" src="../../assets/logo.png" alt="Bot logo" loading="eager" decoding="async" />
+            <div class="brandText">
+              <div class="brandName" data-bind="name">ZiolKen Bot</div>
+              <div class="brandSub">Discord Bot</div>
+            </div>
+          </a>
+
+          <nav class="nav" aria-label="Primary navigation">
+            <a href="#features" class="zzz">Features</a>
+            <a href="#stack" class="zzz">Stack</a>
+            <a href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer" class="zzz grad">Live Status</a>
+            <a class="btn btnPrimary" data-bind-href="invite" href="#" target="_blank" rel="noopener noreferrer">
+              Invite
+              <span class="kbd">+</span>
+            </a>
+            <a class="btn" data-bind-href="github" href="#" target="_blank" rel="noopener noreferrer">GitHub</a>
+          </nav>
+        </div>
+      </div>
     </header>
 
-    <main class="hero" id="home">
-      <section class="card">
-        <h1 class="title">⚡ ZiolKen</h1>
-        <div class="subtitle">• Discord Bot</div>
-        <p class="desc">
-          A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL.
-          It features a comprehensive suite of tools for server management, user engagement, and entertainment, supporting both slash (/) and legacy prefix commands (default !).
-        </p>
-        <div class="actions">
-          <a class="btn primary" href="${invite}" target="_blank" rel="noopener noreferrer">Invite</a>
-          <a class="btn" href="${support}" target="_blank" rel="noopener noreferrer">Support</a>
-          <a class="btn" href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer">Status</a>
-        </div>
-        <p class="muted">
-          The bot also includes an Express-powered web server for a real-time status page and landing page.
-        </p>
-      </section>
-    </main>
+    <main id="main">
+      <section class="hero" id="home">
+        <div class="container">
+          <div class="heroGrid">
+            <div class="heroLeft">
+              <div class="badge reveal">
+                <span class="badgeDot" aria-hidden="true"></span>
+                Slash <span class="kbd">/</span> + Prefix <span class="kbd">!</span> commands
+              </div>
 
-    <footer class="statusbar" id="status">
-      <div class="statusInner">
-        <div class="pill">
-          <span><span id="miniStatus">Version: 1.3.2</span> <span class="muted" id="updated"></span></span>
+              <h1 class="h1 reveal">
+                Meet <span class="grad" data-bind="name">ZiolKen Bot</span>
+              </h1>
+
+              <p class="lead reveal">
+                A <strong>utilities-first</strong> Discord bot built for <strong>moderation</strong>, <strong>economy & minigames</strong>, and <strong>server tools</strong> — with an Express-powered status API for real-time visibility.
+              </p>
+
+              <div class="heroActions reveal">
+                <a class="btn btnPrimary" data-bind-href="invite" href="#" target="_blank" rel="noopener noreferrer">
+                  Invite to Discord
+                  <span class="kbd">↗</span>
+                </a>
+                <a class="btn" data-bind-href="support" href="#" target="_blank" rel="noopener noreferrer">Support</a>
+                <a class="btn" data-bind-href="status" href="#" target="_blank" rel="noopener noreferrer">Live Status</a>
+              </div>
+
+              <div class="heroMeta reveal" role="list">
+                <div class="mini" role="listitem">
+                  <div class="miniK">Focus</div>
+                  <div class="miniV">Moderation</div>
+                  <div class="miniS">Warnings, logs, automod modules</div>
+                </div>
+                <div class="mini" role="listitem">
+                  <div class="miniK">Play</div>
+                  <div class="miniV">Minigames</div>
+                  <div class="miniS">Blackjack, slots, fishing</div>
+                </div>
+                <div class="mini" role="listitem">
+                  <div class="miniK">Ops</div>
+                  <div class="miniV">Status API</div>
+                  <div class="miniS">Health, /status, /incidents</div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="heroRight card reveal" aria-label="Quick preview panel">
+              <div class="panelTop">
+                <p class="panelTitle">Quick start</p>
+                <span class="pill" id="heroHealthPill" aria-live="polite">
+                  <span class="dot warn" id="heroHealthDot" aria-hidden="true"></span>
+                  <span id="heroHealthText"><a href="${invite}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;font-weight:bold;color:var(--text)">Invite</a></span>
+                </span>
+              </div>
+
+              <div class="panelBody">
+                <div class="cmdBox" aria-label="Command examples">
+                  <div class="cmdTop">
+                    <div class="cmdLabel">
+                      <span class="cmdIcon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none">
+                          <path d="M7.5 12h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                          <path d="M12 7.5v9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                          <path d="M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" stroke="currentColor" stroke-width="2" opacity=".8"/>
+                        </svg>
+                      </span>
+                      Command palette
+                    </div>
+                    <span class="kbd">Tab</span>
+                  </div>
+
+                  <div class="cmdMain">
+                    <div class="cmdLine">
+                      <div class="cmdText" id="rotCmd">/setlog #mod-log</div>
+                      <button class="copy" type="button" data-copy="#rotCmd">Copy</button>
+                    </div>
+                    <div class="cmdLine">
+                      <div class="cmdText" id="rotHint">Route moderation actions to a dedicated log channel.</div>
+                      <span class="kbd">Tip</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="panelGrid" aria-label="Live highlights">
+                  <div class="tiny">
+                    <div class="tinyK">Bot version</div>
+                    <div class="tinyV" id="statVersion">1.3.2</div>
+                  </div>
+                  <div class="tiny">
+                    <div class="tinyK">Node</div>
+                    <div class="tinyV" id="statPing">20.20.0</div>
+                  </div>
+                  <div class="tiny">
+                    <div class="tinyK">discord.js</div>
+                    <div class="tinyV" id="statGuilds">14.25.1</div>
+                  </div>
+                </div>
+              </div>
+            </aside>
+          </div>
         </div>
-        <div class="rightMini">
-          <span class="pill">Node <span class="muted" id="version">20.20.0</span></span>
-          <span class="pill">Host <span class="muted" id="host">Render</span></span>
-          <a class="pill linkish" href="${invite}">Invite</a>
+      </section>
+
+      <section class="section" id="features">
+        <div class="container">
+          <div class="secHead reveal">
+            <div>
+              <h2 class="h2">Everything a server needs, in one bot</h2>
+              <p class="sub">
+                Designed as a versatile utilities suite: moderation and security, economy & minigames, everyday utilities, leveling, and an Express status layer.
+              </p>
+            </div>
+          </div>
+
+          <div class="grid3">
+            <article class="feat reveal">
+              <div class="featTop">
+                <div class="ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 2 3 6v6c0 5 3.5 9.5 9 10 5.5-.5 9-5 9-10V6l-9-4Z" stroke="currentColor" stroke-width="2" opacity=".9"/>
+                    <path d="m9.5 12 1.8 1.8 3.7-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                <h3 class="featTitle">Moderation & Security</h3>
+              </div>
+              <p class="featP">
+                Ban/kick/timeout tools, purge/lock/slowmode controls, a warning system, configurable mod logs, plus opt-in automod modules.
+              </p>
+              <div class="chipRow" aria-label="Moderation highlights">
+                <span class="chip">warn</span>
+                <span class="chip">setlog</span>
+                <span class="chip">antilink</span>
+                <span class="chip">raid protection</span>
+              </div>
+            </article>
+
+            <article class="feat reveal">
+              <div class="featTop">
+                <div class="ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M7 8h10M8.5 12H15.5M10 16h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M6 3h12a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3Z" stroke="currentColor" stroke-width="2" opacity=".85"/>
+                  </svg>
+                </div>
+                <h3 class="featTitle">Utilities that feel instant</h3>
+              </div>
+              <p class="featP">
+                Server/user/channel/role info, avatar/banner, snipe, AFK, polls, reminders, timestamp generator, say, and custom prefixes.
+              </p>
+              <div class="chipRow" aria-label="Utilities highlights">
+                <span class="chip">serverinfo</span>
+                <span class="chip">reminders</span>
+                <span class="chip">timestamp</span>
+                <span class="chip">prefix</span>
+              </div>
+            </article>
+
+            <article class="feat reveal">
+              <div class="featTop">
+                <div class="ico" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M12 3v18" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity=".9"/>
+                    <path d="M7 8c1-2 3-3 5-3s4 1 5 3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M7 16c1 2 3 3 5 3s4-1 5-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    <path d="M6.5 12h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <h3 class="featTitle">Economy, minigames & leveling</h3>
+              </div>
+              <p class="featP">
+                Server economy with daily/weekly rewards, leaderboard tracking, and fun games like blackjack, slots, fishing, and more. Leveling is opt-in per server.
+              </p>
+              <div class="chipRow" aria-label="Game highlights">
+                <span class="chip">daily</span>
+                <span class="chip">leaderboard</span>
+                <span class="chip">blackjack</span>
+                <span class="chip">level</span>
+              </div>
+            </article>
+          </div>
         </div>
+      </section>
+
+      <section class="section" id="stack">
+        <div class="container">
+          <div class="secHead reveal">
+            <div>
+              <h2 class="h2">Built for long-term reliability</h2>
+              <p class="sub">
+                A modern Node.js bot stack with PostgreSQL persistence and an Express layer for health checks and operational visibility.
+              </p>
+            </div>
+          </div>
+
+          <div class="split">
+            <div class="card stackCard reveal">
+              <h3 class="featTitle" style="margin:0;font-size:16px">Tech stack</h3>
+              <p class="featP" style="margin-top:10px">
+                Node.js + discord.js + PostgreSQL, plus Express endpoints for status and incidents.
+              </p>
+              <div class="stackGrid">
+                <div class="step">
+                  <div class="stepTop">
+                    <div class="stepN">Runtime</div>
+                    <span class="kbd">Node.js</span>
+                  </div>
+                  <div class="stepT">Stable operations</div>
+                  <div class="stepP">Designed to run cleanly in production environments.</div>
+                </div>
+                <div class="step">
+                  <div class="stepTop">
+                    <div class="stepN">Framework</div>
+                    <span class="kbd">discord.js</span>
+                  </div>
+                  <div class="stepT">Discord-native UX</div>
+                  <div class="stepP">Slash + prefix command support for flexible usage.</div>
+                </div>
+                <div class="step">
+                  <div class="stepTop">
+                    <div class="stepN">Database</div>
+                    <span class="kbd">PostgreSQL</span>
+                  </div>
+                  <div class="stepT">Persistence</div>
+                  <div class="stepP">Economy, leveling, reminders, and server settings.</div>
+                </div>
+                <div class="step">
+                  <div class="stepTop">
+                    <div class="stepN">Web</div>
+                    <span class="kbd">Express</span>
+                  </div>
+                  <div class="stepT">Status endpoints</div>
+                  <div class="stepP">Health checks, /status detail, /incidents history.</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card stackCard reveal">
+              <h3 class="featTitle" style="margin:0;font-size:16px">Getting started</h3>
+              <p class="featP" style="margin-top:10px">
+                Add the bot, configure essentials, and optionally enable advanced modules.
+              </p>
+
+              <div class="stackGrid">
+                <div class="step">
+                  <div class="stepTop">
+                    <div class="stepN">Step 01</div>
+                    <span class="kbd">Invite</span>
+                  </div>
+                  <div class="stepT">Add to server</div>
+                  <div class="stepP">Invite the bot with the required permissions for your needs.</div>
+                </div>
+
+                <div class="step">
+                  <div class="stepTop">
+                    <div class="stepN">Step 02</div>
+                    <span class="kbd">/setlog</span>
+                  </div>
+                  <div class="stepT">Enable mod logs</div>
+                  <div class="stepP">Route moderation actions to a dedicated channel.</div>
+                </div>
+
+                <div class="step">
+                  <div class="stepTop">
+                    <div class="stepN">Step 03</div>
+                    <span class="kbd">/automod</span>
+                  </div>
+                  <div class="stepT">Opt-in AutoMod</div>
+                  <div class="stepP">Toggle modules like antilink/antispam as needed.</div>
+                </div>
+
+                <div class="step">
+                  <div class="stepTop">
+                    <div class="stepN">Step 04</div>
+                    <span class="kbd">/level</span>
+                  </div>
+                  <div class="stepT">Opt-in leveling</div>
+                  <div class="stepP">Enable per-server leveling when you’re ready.</div>
+                </div>
+              </div>
+
+              <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap">
+                <a class="btn btnPrimary" data-bind-href="invite" href="#" target="_blank" rel="noopener noreferrer">Invite now</a>
+                <a class="btn" data-bind-href="github" href="#" target="_blank" rel="noopener noreferrer">View source</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    <footer class="statusbar2" id="status">
+      <div class="statusInner2">
+        <div class="pill2">
+          <span><span id="miniStatus">Version: 1.3.2</span> <span class="muted2" id="updated"></span></span>
+        </div>
+        <div class="rightMini2">
+          <span class="pill2">Node <span class="muted2" id="version">20.20.0</span></span>
+          <span class="pill2">Host <span class="muted2" id="host">Render</span></span>
+          <a class="pill2 linkish" href="${invite}">Invite</a>
+        </div>
+      </div>
+    </footer>
+
+    <footer class="footer">
+      <div class="footer__left">
+        <div class="footer__brand grad" style="font-weight:bold">ZiolKen Bot</div>
+        <div class="footer__small">A versatile, utilities-focused Discord bot.</div>
+      </div>
+
+      <div class="footer__right">
+        <a class="footer__link" href="https://buymeacoffee.com/_zkn" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a>
+        <a class="footer__link" href="https://www.patreon.com/ZiolKen" target="_blank" rel="noopener noreferrer">Patreon</a>
       </div>
     </footer>
   </div>
