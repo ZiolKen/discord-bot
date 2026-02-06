@@ -2,15 +2,25 @@ const {
   SlashCommandBuilder,
   EmbedBuilder,
   AttachmentBuilder,
-  PermissionFlagsBits
+  PermissionFlagsBits,
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle
 } = require('discord.js');
 const { getGuildSettings, setGuildSetting } = require('../services/guildSettings');
 const { parseDuration, toDiscordTs } = require('../utils/time');
 const { createReminder, listReminders } = require('../services/reminders');
+const { createSession, endSession } = require('../services/gameSessions');
+
+function hasDisallowedMentions(text) {
+  const s = String(text || '');
+  return /@everyone|@here|<@!?\d+>|<@&\d+>|<#\d+>/.test(s);
+}
 
 module.exports = [
   {
     name: 'help',
+    aliases: ['h','commands','cmds','c'],
     category: 'utilities',
     description: 'Show command list',
     slash: {
@@ -56,6 +66,7 @@ module.exports = [
 
   {
     name: 'ping',
+    aliases: ['p'],
     category: 'utilities',
     description: 'Check bot latency',
     slash: {
@@ -104,6 +115,7 @@ module.exports = [
 
   {
     name: 'uptime',
+    aliases: ['ut'],
     category: 'utilities',
     description: 'Show uptime',
     slash: {
@@ -121,6 +133,7 @@ module.exports = [
 
   {
     name: 'prefix',
+    aliases: ['pf'],
     category: 'utilities',
     description: 'View or set prefix',
     slash: {
@@ -153,6 +166,7 @@ module.exports = [
 
   {
     name: 'invite',
+    aliases: ['inv','ivt'],
     category: 'utilities',
     description: 'Get bot invite link',
     slash: {
@@ -174,6 +188,7 @@ module.exports = [
 
   {
     name: 'serverinfo',
+    aliases: ['si'],
     category: 'utilities',
     description: 'Server info',
     slash: {
@@ -207,6 +222,7 @@ module.exports = [
 
   {
     name: 'userinfo',
+    aliases: ['ui'],
     category: 'utilities',
     description: 'User info',
     slash: {
@@ -241,6 +257,7 @@ module.exports = [
 
   {
     name: 'avatar',
+    aliases: ['avt'],
     category: 'utilities',
     description: 'Get user avatar',
     slash: {
@@ -263,6 +280,7 @@ module.exports = [
 
   {
     name: 'banner',
+    aliases: ['bn'],
     category: 'utilities',
     description: 'Get user banner',
     slash: {
@@ -289,6 +307,7 @@ module.exports = [
 
   {
     name: 'servericon',
+    aliases: ['sico','sic','sicon'],
     category: 'utilities',
     description: 'Get server icon',
     slash: {
@@ -308,6 +327,7 @@ module.exports = [
 
   {
     name: 'channelinfo',
+    aliases: ['ci'],
     category: 'utilities',
     description: 'Channel info',
     slash: {
@@ -340,6 +360,7 @@ module.exports = [
 
   {
     name: 'roleinfo',
+    aliases: ['ri'],
     category: 'utilities',
     description: 'Role info',
     slash: {
@@ -374,6 +395,7 @@ module.exports = [
 
   {
     name: 'timestamp',
+    aliases: ['tt'],
     category: 'utilities',
     description: 'Make a Discord timestamp from UNIX seconds',
     slash: {
@@ -438,7 +460,7 @@ module.exports = [
 
   {
     name: 'remind',
-    aliases: ['reminder'],
+    aliases: ['reminder','rm','rmd'],
     category: 'utilities',
     description: 'Set a reminder',
     slash: {
@@ -487,6 +509,7 @@ module.exports = [
 
   {
     name: 'reminders',
+    aliases: ['rmds'],
     category: 'utilities',
     description: 'List your reminders',
     slash: {
@@ -519,17 +542,100 @@ module.exports = [
         .addStringOption(o => o.setName('text').setDescription('Text').setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
       async run(interaction) {
-        const text = interaction.options.getString('text');
-        await interaction.reply({ content: '✅ Sent.', ephemeral: true });
-        return interaction.channel.send({ content: text });
+        const text = interaction.options.getString('text', true);
+  
+        if (hasDisallowedMentions(text)) {
+          return interaction.reply({ content: '🚫 Mentions are not allowed in /say.', ephemeral: true });
+        }
+  
+        await interaction.deferReply({ ephemeral: true });
+  
+        const sessionId = createSession({
+          type: 'say',
+          ownerId: interaction.user.id,
+          allowAll: true,
+          guildId: interaction.guildId,
+          channelId: interaction.channelId,
+          ttlMs: 24 * 60 * 60_000,
+          state: { tag: interaction.user.tag, id: interaction.user.id },
+          onAction: async (btn, action, s) => {
+            if (action !== 'who') return btn.deferUpdate().catch(() => {});
+            return btn.reply({
+              content: `Sent by: ${s.state.tag} (${s.state.id})`,
+              ephemeral: true,
+              allowedMentions: { parse: [] }
+            }).catch(() => {});
+          }
+        });
+  
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`g:${sessionId}:who`)
+            .setLabel('Sent by')
+            .setStyle(ButtonStyle.Secondary)
+        );
+  
+        try {
+          await interaction.channel.send({
+            content: text,
+            components: [row],
+            allowedMentions: { parse: [] }
+          });
+          return interaction.editReply({ content: '✅ Sent.' });
+        } catch (e) {
+          endSession(sessionId);
+          return interaction.editReply({ content: '⚠️ I cannot send messages in this channel.' });
+        }
       }
     },
     prefix: {
       async run(message, args) {
-        if (!message.member.permissions.has(PermissionFlagsBits.ManageMessages)) return message.reply('🚫 You need **Manage Messages**.');
+        if (!message.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+          return message.reply('🚫 You need **Manage Messages**.');
+        }
+  
         const text = args.join(' ');
         if (!text) return message.reply('Usage: `!say <text>`');
-        return message.channel.send({ content: text });
+  
+        if (hasDisallowedMentions(text)) {
+          return message.reply('🚫 Mentions are not allowed in `say`.');
+        }
+  
+        const sessionId = createSession({
+          type: 'say',
+          ownerId: message.author.id,
+          allowAll: true,
+          guildId: message.guild?.id,
+          channelId: message.channel?.id,
+          ttlMs: 24 * 60 * 60_000,
+          state: { tag: message.author.tag, id: message.author.id },
+          onAction: async (btn, action, s) => {
+            if (action !== 'who') return btn.deferUpdate().catch(() => {});
+            return btn.reply({
+              content: `Sent by: ${s.state.tag} (${s.state.id})`,
+              ephemeral: true,
+              allowedMentions: { parse: [] }
+            }).catch(() => {});
+          }
+        });
+  
+        const row = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setCustomId(`g:${sessionId}:who`)
+            .setLabel('Sent by')
+            .setStyle(ButtonStyle.Secondary)
+        );
+  
+        try {
+          return await message.channel.send({
+            content: text,
+            components: [row],
+            allowedMentions: { parse: [] }
+          });
+        } catch (e) {
+          endSession(sessionId);
+          return message.reply('⚠️ I cannot send messages in this channel.');
+        }
       }
     }
   },
@@ -560,6 +666,7 @@ module.exports = [
 
   {
     name: 'snipe',
+    aliases: ['snp'],
     category: 'utilities',
     description: 'Show last deleted message in this channel',
     slash: {
@@ -581,6 +688,7 @@ module.exports = [
 
   {
     name: 'level',
+    aliases: ['lv'],
     category: 'utilities',
     description: 'Toggle leveling system',
     slash: {
@@ -629,6 +737,7 @@ module.exports = [
 
   {
     name: 'servers',
+    aliases: ['svs'],
     category: 'utilities',
     description: 'List servers the bot is in (owner only)',
     slash: {
