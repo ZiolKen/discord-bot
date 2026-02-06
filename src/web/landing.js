@@ -1,350 +1,377 @@
-function escapeHtml(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function svgDataUri(svg) {
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
-function inviteUrl(clientId, permissions) {
-  const perms = String(permissions || '8');
-  return `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(clientId)}&scope=bot%20applications.commands&permissions=${encodeURIComponent(perms)}`;
-}
+const LOWPOLY = svgDataUri(`
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1b1d20"/>
+      <stop offset="1" stop-color="#0f1113"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#g)"/>
+  <g opacity="0.55">
+    <polygon points="0,0 260,0 160,210" fill="#2a2d31"/>
+    <polygon points="260,0 520,0 430,220" fill="#23262a"/>
+    <polygon points="520,0 780,0 670,200" fill="#2f3338"/>
+    <polygon points="780,0 1060,0 910,240" fill="#202327"/>
+    <polygon points="1060,0 1600,0 1300,320" fill="#2a2d31"/>
+    <polygon points="0,0 160,210 0,420" fill="#1f2226"/>
+    <polygon points="160,210 430,220 260,440" fill="#2c3035"/>
+    <polygon points="430,220 670,200 560,460" fill="#1d2024"/>
+    <polygon points="670,200 910,240 760,480" fill="#2b2f34"/>
+    <polygon points="910,240 1300,320 1020,520" fill="#1a1c20"/>
+    <polygon points="0,420 160,210 260,440" fill="#2a2d31"/>
+    <polygon points="0,420 260,440 120,680" fill="#1b1d20"/>
+    <polygon points="260,440 560,460 360,720" fill="#2f3338"/>
+    <polygon points="560,460 760,480 620,740" fill="#212428"/>
+    <polygon points="760,480 1020,520 860,780" fill="#2a2d31"/>
+    <polygon points="1020,520 1600,900 860,780" fill="#141619"/>
+    <polygon points="120,680 360,720 0,900" fill="#202327"/>
+    <polygon points="360,720 620,740 420,900" fill="#2b2f34"/>
+    <polygon points="620,740 860,780 700,900" fill="#1f2226"/>
+  </g>
+</svg>
+`);
 
-function renderLandingPage(opts) {
-  const title = escapeHtml(opts.title || 'Bot');
-  const clientId = String(opts.clientId || '');
-  const permissions = String(opts.permissions || '8');
-  const statusUrl = opts.statusUrl ? String(opts.statusUrl) : '';
-  const invite = clientId ? inviteUrl(clientId, permissions) : '';
-
-  const external = statusUrl
-    ? `<a class="btn ghost" href="${escapeHtml(statusUrl)}" target="_blank" rel="noopener">Status</a>`
-    : '';
-
-  const year = new Date().getFullYear();
+function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statusUrl }) {
+  const safeName = String(appName || 'NAME COMPANY');
+  const invite = String(inviteUrl || '#');
+  const support = String(supportServer || '#');
+  const status = String(statusUrl || '/status');
+  const avatar = botAvatar ? `<img class="brand__avatar" src="${botAvatar}" alt="${safeName}"/>` : '';
 
   return `<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="color-scheme" content="dark light" />
-  <link rel="icon" type="image/png" href="../../assets/logo.png" />
-  <link rel="shortcut icon" href="../../assets/logo.png" />
-  <link rel="apple-touch-icon" size="180x180" href="../../assets/logo.png" />
-  <meta content="ie=edge" http-equiv="X-UA-Compatible" />
-  <meta name="theme-color" content="#0b0b10" />
-  <link rel="manifest" href="../../assets/manifest.json" />
-  <title>${title}</title>
-  <meta name="description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
-  <meta property="og:title" content="ZiolKen Bot" />
-  <meta property="og:description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://discord-bot-us.onrender.com/" />
-  <meta property="og:locale" content="en_US" />
-  <meta property="og:site_name" content="ZiolKen Bot" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="ZiolKen Bot" />
-  <meta name="twitter:description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>${safeName}</title>
   <style>
     :root{
-      --bg0:#050510;
-      --bg1:#0b0b1a;
-      --card:rgba(255,255,255,.06);
-      --card2:rgba(255,255,255,.09);
-      --bd:rgba(255,255,255,.12);
-      --txt:#e9e9ff;
-      --mut:#b9b9d9;
-      --ok:#2ecc71;
-      --warn:#f1c40f;
-      --bad:#e74c3c;
-      --chip:rgba(255,255,255,.10);
-      --shadow:0 18px 70px rgba(0,0,0,.45);
-      --r:18px;
+      --bg:#0f1113;
+      --panel:rgba(15,17,19,.62);
+      --panel2:rgba(15,17,19,.85);
+      --text:#f5f6f7;
+      --muted:rgba(245,246,247,.75);
+      --line:rgba(255,255,255,.12);
+      --accent:#ffffff;
+      --shadow:0 18px 60px rgba(0,0,0,.45);
+      --radius:18px;
     }
     *{box-sizing:border-box}
+    html,body{height:100%}
     body{
       margin:0;
-      min-height:100vh;
-      color:var(--txt);
-      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      color:var(--text);
+      font-family:ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
       background:
-        radial-gradient(1200px 900px at 15% 10%, #3b1cff44 0%, transparent 55%),
-        radial-gradient(1000px 700px at 85% 25%, #00d4ff33 0%, transparent 55%),
-        radial-gradient(900px 650px at 35% 90%, #ff2bd633 0%, transparent 55%),
-        linear-gradient(180deg,var(--bg0),var(--bg1));
+        radial-gradient(1200px 700px at 15% 20%, rgba(255,255,255,.06), transparent 60%),
+        radial-gradient(900px 550px at 80% 25%, rgba(255,255,255,.04), transparent 55%),
+        url('${LOWPOLY}');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
     }
-    a{color:inherit;text-decoration:none}
-    .wrap{max-width:1120px;margin:0 auto;padding:28px 18px 44px}
+    .wrap{
+      min-height:100%;
+      display:flex;
+      flex-direction:column;
+    }
     .top{
-      display:flex;align-items:center;justify-content:space-between;gap:12px;
-      padding:14px 16px;border:1px solid var(--bd);border-radius:var(--r);
-      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));
-      box-shadow:var(--shadow);
-      backdrop-filter:blur(14px);
-    }
-    .brand{display:flex;align-items:center;gap:12px}
-    .logo{
-      width:44px;height:44px;border-radius:12px;
-      background:rgba(0,212,255,.20);
-      padding:8px;
-      box-shadow:0 10px 25px rgba(0,212,255,.20);
-    }
-    .brand h1{margin:0;font-size:16px;letter-spacing:.2px}
-    .brand p{margin:0;color:var(--mut);font-size:12px}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-    .btn{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:10px 12px;border-radius:14px;border:1px solid var(--bd);
-      background:rgba(255,255,255,.07);
-      cursor:pointer;user-select:none;
-      transition:transform .12s ease, background .12s ease;
-    }
-    .btn:hover{transform:translateY(-1px);background:rgba(255,255,255,.10)}
-    .btn.primary{border-color:transparent;background:linear-gradient(135deg,#7c4dff,#00d4ff)}
-    .btn.ghost{background:transparent}
-    .grid{
-      margin-top:18px;
-      display:grid;
-      grid-template-columns:1.1fr .9fr;
+      max-width:1100px;
+      margin:0 auto;
+      padding:28px 20px 0;
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
       gap:16px;
     }
-    @media (max-width: 920px){.grid{grid-template-columns:1fr}}
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:700;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+      font-size:12px;
+      opacity:.95;
+    }
+    .brand__avatar{
+      width:26px;height:26px;border-radius:999px;
+      border:1px solid var(--line);
+      box-shadow:0 8px 30px rgba(0,0,0,.35);
+    }
+    .nav{
+      display:flex;
+      align-items:center;
+      gap:18px;
+      font-size:13px;
+      opacity:.9;
+    }
+    .nav a{
+      color:var(--text);
+      text-decoration:none;
+      padding:8px 10px;
+      border-radius:999px;
+      transition:background .15s ease, opacity .15s ease;
+    }
+    .nav a:hover{background:rgba(255,255,255,.06)}
+    .nav .cta{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+    }
+    .hero{
+      max-width:1100px;
+      margin:0 auto;
+      width:100%;
+      padding:70px 20px 48px;
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap:28px;
+      align-items:center;
+      flex:1;
+    }
+    @media (max-width: 900px){
+      .hero{grid-template-columns: 1fr; padding-top:46px}
+      .nav{gap:8px; flex-wrap:wrap; justify-content:flex-end}
+    }
     .card{
-      border:1px solid var(--bd);
-      border-radius:var(--r);
-      background:linear-gradient(180deg,var(--card),rgba(255,255,255,.03));
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
       box-shadow:var(--shadow);
-      backdrop-filter:blur(14px);
-      overflow:hidden;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
     }
-    .card .hd{
-      padding:14px 16px;
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
+    .left{
+      padding:36px 34px;
     }
-    .card .hd h2{margin:0;font-size:14px}
-    .card .bd{padding:14px 16px}
-    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    @media (max-width: 720px){.kpis{grid-template-columns:1fr}}
-    .kpi{
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:16px;
+    .title{
+      font-size:64px;
+      line-height:1.02;
+      margin:0;
+      letter-spacing:-.03em;
+    }
+    @media (max-width: 520px){
+      .title{font-size:46px}
+      .left{padding:26px 22px}
+    }
+    .subtitle{
+      margin:16px 0 0;
+      font-size:22px;
+      font-weight:600;
+      color:rgba(255,255,255,.9);
+    }
+    .desc{
+      margin:14px 0 0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.7;
+      max-width:58ch;
+    }
+    .actions{
+      margin-top:22px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+    }
+    .btn{
+      appearance:none;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+      padding:10px 14px;
+      border-radius:12px;
+      text-decoration:none;
+      font-weight:600;
+      font-size:14px;
+      letter-spacing:.01em;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    .btn:hover{
+      transform: translateY(-1px);
+      background:rgba(255,255,255,.10);
+      border-color:rgba(255,255,255,.20);
+    }
+    .btn.primary{
+      background:rgba(255,255,255,.14);
+      border-color:rgba(255,255,255,.28);
+    }
+    .right{
+      padding:22px;
+    }
+    .panelTitle{
+      margin:0;
+      font-size:14px;
+      letter-spacing:.02em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.82);
+    }
+    .kv{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .kv .item{
+      border:1px solid var(--line);
+      border-radius:14px;
       padding:12px 12px;
-      background:rgba(255,255,255,.05);
+      background:rgba(0,0,0,.18);
     }
-    .kpi .lab{font-size:12px;color:var(--mut)}
-    .kpi .val{margin-top:6px;font-size:20px;font-weight:700;letter-spacing:.2px}
-    .chips{display:flex;gap:8px;flex-wrap:wrap}
-    .chip{
-      display:inline-flex;align-items:center;gap:8px;
-      padding:8px 10px;border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background:var(--chip);
-      font-size:12px;color:var(--mut);
+    .kv .k{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:rgba(255,255,255,.65);
     }
-    .dot{width:8px;height:8px;border-radius:999px;background:var(--warn)}
-    .dot.ok{background:var(--ok)}
-    .dot.bad{background:var(--bad)}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
-    .inc{
-      display:flex;flex-direction:column;gap:10px;
+    .kv .v{
+      margin-top:6px;
+      font-size:18px;
+      font-weight:700;
     }
-    .incItem{
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:16px;
-      padding:12px 12px;
-      background:rgba(0,0,0,.14);
+    .statusbar{
+      max-width:1100px;
+      margin:0 auto;
+      width:100%;
+      padding:0 20px 22px;
     }
-    .incTop{display:flex;justify-content:space-between;gap:10px}
-    .incTitle{font-weight:700}
+    .statusInner{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      padding:12px 14px;
+      background:var(--panel2);
+      border:1px solid var(--line);
+      border-radius:14px;
+      box-shadow:0 12px 45px rgba(0,0,0,.35);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
     .pill{
-      padding:6px 10px;border-radius:999px;font-size:12px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.05);
-      color:var(--mut);
-      white-space:nowrap;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      font-size:12px;
+      color:rgba(255,255,255,.85);
     }
-    .pill.ok{color:#bfffd6;border-color:#2ecc7144;background:#2ecc711a}
-    .pill.bad{color:#ffd0cc;border-color:#e74c3c44;background:#e74c3c1a}
-    .pill.warn{color:#fff2b8;border-color:#f1c40f44;background:#f1c40f1a}
-    .mut{color:var(--mut)}
-    .foot{
-      margin-top:16px;
-      display:flex;justify-content:center;flex-wrap:wrap;gap:10px;
-      color:var(--mut);font-size:12px;
-      text-align:center;align-items:center;
+    .dot{
+      width:9px;height:9px;border-radius:999px;
+      background:#9aa4ad;
+      box-shadow:0 0 0 4px rgba(154,164,173,.12);
     }
+    .dot.ok{background:#5eea8b; box-shadow:0 0 0 4px rgba(94,234,139,.14)}
+    .dot.bad{background:#ff5d5d; box-shadow:0 0 0 4px rgba(255,93,93,.14)}
+    .muted{color:rgba(255,255,255,.62)}
+    .rightMini{display:flex; gap:14px; flex-wrap:wrap; justify-content:flex-end}
+    .linkish{color:rgba(255,255,255,.9); text-decoration:none; border-bottom:1px solid rgba(255,255,255,.22)}
+    .linkish:hover{border-bottom-color:rgba(255,255,255,.45)}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-      <div class="brand">
-        <div class="logo">
-        <svg viewBox="0 -28.5 256 256" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" preserveAspectRatio="xMidYMid" fill="#000000"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <g> <path d="M216.856339,16.5966031 C200.285002,8.84328665 182.566144,3.2084988 164.041564,0 C161.766523,4.11318106 159.108624,9.64549908 157.276099,14.0464379 C137.583995,11.0849896 118.072967,11.0849896 98.7430163,14.0464379 C96.9108417,9.64549908 94.1925838,4.11318106 91.8971895,0 C73.3526068,3.2084988 55.6133949,8.86399117 39.0420583,16.6376612 C5.61752293,67.146514 -3.4433191,116.400813 1.08711069,164.955721 C23.2560196,181.510915 44.7403634,191.567697 65.8621325,198.148576 C71.0772151,190.971126 75.7283628,183.341335 79.7352139,175.300261 C72.104019,172.400575 64.7949724,168.822202 57.8887866,164.667963 C59.7209612,163.310589 61.5131304,161.891452 63.2445898,160.431257 C105.36741,180.133187 151.134928,180.133187 192.754523,160.431257 C194.506336,161.891452 196.298154,163.310589 198.110326,164.667963 C191.183787,168.842556 183.854737,172.420929 176.223542,175.320965 C180.230393,183.341335 184.861538,190.991831 190.096624,198.16893 C211.238746,191.588051 232.743023,181.531619 254.911949,164.955721 C260.227747,108.668201 245.831087,59.8662432 216.856339,16.5966031 Z M85.4738752,135.09489 C72.8290281,135.09489 62.4592217,123.290155 62.4592217,108.914901 C62.4592217,94.5396472 72.607595,82.7145587 85.4738752,82.7145587 C98.3405064,82.7145587 108.709962,94.5189427 108.488529,108.914901 C108.508531,123.290155 98.3405064,135.09489 85.4738752,135.09489 Z M170.525237,135.09489 C157.88039,135.09489 147.510584,123.290155 147.510584,108.914901 C147.510584,94.5396472 157.658606,82.7145587 170.525237,82.7145587 C183.391518,82.7145587 193.761324,94.5189427 193.539891,108.914901 C193.539891,123.290155 183.391518,135.09489 170.525237,135.09489 Z" fill="#5865F2" fill-rule="nonzero"> </path> </g> </g></svg>
-        </div>
-        <div>
-          <h1>${title}</h1>
-          <p>@ziolken</p>
-        </div>
-      </div>
-      <div class="actions">
-        ${invite ? `<a class="btn primary" href="${escapeHtml(invite)}" target="_blank" rel="noopener noreferrer">Invite</a>` : ''}
-        ${external}
-      </div>
-    </div>
+    <header class="top">
+      <div class="brand">${avatar}<span>${safeName}</span></div>
+      <nav class="nav">
+        <a href="#home">Home</a>
+        <a href="#profile">Profile</a>
+        <a href="#about">About Us</a>
+        <a href="#contacts">Contacts</a>
+        <a class="cta" href="${invite}">Sign Up</a>
+      </nav>
+    </header>
 
-    <div class="grid">
-      <div class="card">
-        <div class="hd">
-          <h2>Live Status</h2>
-          <div class="chip"><span id="liveDot" class="dot"></span><span id="liveText">Loading…</span></div>
+    <main class="hero" id="home">
+      <section class="card left">
+        <h1 class="title">Landing Page</h1>
+        <div class="subtitle">Creative Design</div>
+        <p class="desc">
+          Minimal, modern landing page for ${safeName}. Add the bot, explore commands, and track availability.
+          Built for long-term stability with a compact status footer.
+        </p>
+        <div class="actions">
+          <a class="btn primary" href="${invite}">Sign Up</a>
+          <a class="btn" href="${support}">Login</a>
+          <a class="btn" href="#status">Status</a>
         </div>
-        <div class="bd">
-          <div class="kpis">
-            <div class="kpi">
-              <div class="lab">Ping</div>
-              <div class="val" id="kPing">—</div>
-            </div>
-            <div class="kpi">
-              <div class="lab">Uptime</div>
-              <div class="val" id="kUptime">—</div>
-            </div>
-            <div class="kpi">
-              <div class="lab">Guilds / Users</div>
-              <div class="val"><span id="kGuilds">—</span> / <span id="kUsers">—</span></div>
-            </div>
+      </section>
+
+      <aside class="card right" id="about">
+        <h2 class="panelTitle">Live</h2>
+        <div class="kv">
+          <div class="item">
+            <div class="k">Status</div>
+            <div class="v" id="statusText">…</div>
           </div>
-
-          <div style="height:12px"></div>
-
-          <div class="chips" id="svcChips"></div>
-
-          <div style="height:12px"></div>
-
-          <div class="mut">
-            Updated: <span class="mono" id="kUpdated">—</span><br/>
-            Boot: <span class="mono" id="kBoot">—</span><br/>
-            Host: <span class="mono" id="kHost">—</span>
+          <div class="item">
+            <div class="k">Ping</div>
+            <div class="v"><span id="ping">—</span> ms</div>
+          </div>
+          <div class="item">
+            <div class="k">Guilds</div>
+            <div class="v" id="guilds">—</div>
+          </div>
+          <div class="item">
+            <div class="k">Uptime</div>
+            <div class="v" id="uptime">—</div>
           </div>
         </div>
-      </div>
+        <p class="desc muted" style="margin-top:14px">
+          Prefer a cleaner landing? This page keeps the status minimal and tucked to the bottom.
+        </p>
+      </aside>
+    </main>
 
-      <div class="card">
-        <div class="hd">
-          <h2>Incidents</h2>
-          <div class="pill" id="incCount">—</div>
+    <footer class="statusbar" id="status">
+      <div class="statusInner">
+        <div class="pill">
+          <span id="dot" class="dot"></span>
+          <span><span id="miniStatus">Loading</span> <span class="muted" id="updated"></span></span>
         </div>
-        <div class="bd">
-          <div class="inc" id="incList"></div>
+        <div class="rightMini">
+          <span class="pill">Version <span class="muted" id="version">—</span></span>
+          <span class="pill">Host <span class="muted" id="host">—</span></span>
+          <a class="pill linkish" href="${invite}">Invite</a>
         </div>
       </div>
-    </div>
-
-    <div class="foot">
-      <div>© ${year} • ${title}</div>
-      <div class="mut">Client: <span class="mono">${escapeHtml(clientId)}</span> • Permissions: <span class="mono">${escapeHtml(permissions)}</span></div>
-    </div>
+    </footer>
   </div>
 
-<script>
-  const $ = (id) => document.getElementById(id);
+  <script>
+    async function refresh() {
+      try {
+        const res = await fetch('${status}', { cache: 'no-store' });
+        const data = await res.json();
 
-  function setLive(isOk, txt){
-    $('liveText').textContent = txt;
-    $('liveDot').className = 'dot' + (isOk ? ' ok' : ' bad');
-  }
+        const ok = data && data.status === 'online';
+        document.getElementById('dot').className = 'dot ' + (ok ? 'ok' : 'bad');
 
-  function fmtTs(s){
-    try { return new Date(s).toISOString(); } catch { return String(s||''); }
-  }
+        document.getElementById('statusText').textContent = ok ? 'Online' : 'Offline';
+        document.getElementById('miniStatus').textContent = ok ? 'Online' : 'Offline';
 
-  function renderServices(services){
-    const box = $('svcChips');
-    box.innerHTML = '';
-    const entries = Object.entries(services || {});
-    if (!entries.length) {
-      const el = document.createElement('div');
-      el.className = 'chip';
-      el.innerHTML = '<span class="dot"></span><span>No services</span>';
-      box.appendChild(el);
-      return;
-    }
-    for (const [k,v] of entries){
-      const el = document.createElement('div');
-      el.className = 'chip';
-      el.innerHTML = '<span class="dot ' + (v === 'online' ? 'ok' : 'bad') + '"></span>' +
-                     '<span class="mono">' + k + '</span>' +
-                     '<span>' + v + '</span>';
-      box.appendChild(el);
-    }
-  }
+        document.getElementById('ping').textContent = (data.ping ?? '—');
+        document.getElementById('guilds').textContent = (data.guilds ?? '—');
+        document.getElementById('uptime').textContent = (data.uptime ?? '—');
 
-  function renderIncidents(list){
-    const box = $('incList');
-    box.innerHTML = '';
-    const arr = Array.isArray(list) ? list : [];
-    $('incCount').textContent = arr.length ? (arr.length + ' total') : 'none';
-    if (!arr.length){
-      const el = document.createElement('div');
-      el.className = 'incItem';
-      el.innerHTML = '<div class="incTop"><div class="incTitle">All clear</div><div class="pill ok">healthy</div></div><div class="mut" style="margin-top:6px">No recent incidents.</div>';
-      box.appendChild(el);
-      return;
-    }
-    for (const it of arr.slice(0, 12)){
-      const st = String(it.status || '');
-      const isResolved = st === 'resolved' || it.resolvedAt || it.resolved_at;
-      const pillCls = isResolved ? 'ok' : 'warn';
-      const started = it.startedAt || it.started_at;
-      const resolved = it.resolvedAt || it.resolved_at;
-      const title = it.title || '';
-      const service = it.service || '';
-      const el = document.createElement('div');
-      el.className = 'incItem';
-      el.innerHTML =
-        '<div class="incTop">' +
-          '<div class="incTitle">' + service + '</div>' +
-          '<div class="pill ' + pillCls + '">' + (isResolved ? 'resolved' : 'investigating') + '</div>' +
-        '</div>' +
-        '<div style="margin-top:8px">' + title + '</div>' +
-        '<div class="mut" style="margin-top:8px">Started: <span class="mono">' + fmtTs(started) + '</span>' +
-        (resolved ? '<br/>Resolved: <span class="mono">' + fmtTs(resolved) + '</span>' : '') +
-        '</div>';
-      box.appendChild(el);
-    }
-  }
-
-  async function refresh(){
-    try{
-      const r = await fetch('/status', { cache: 'no-store' });
-      if(!r.ok) throw new Error('status');
-      const s = await r.json();
-      setLive(true, 'Online');
-      $('kPing').textContent = Math.round(Number(s.ping || 0)) + 'ms';
-      $('kUptime').textContent = s.uptime || '—';
-      $('kGuilds').textContent = String(s.guilds ?? '—');
-      $('kUsers').textContent = String(s.users ?? '—');
-      $('kUpdated').textContent = s.updated ? fmtTs(s.updated) : '—';
-      $('kBoot').textContent = s.lastBoot ? fmtTs(s.lastBoot) : '—';
-      $('kHost').textContent = s.host || '—';
-      renderServices(s.services);
-    }catch{
-      setLive(false, 'Offline');
-      renderServices({});
+        document.getElementById('version').textContent = (data.version ?? '—');
+        document.getElementById('host').textContent = (data.host ?? '—');
+        document.getElementById('updated').textContent = data.updated ? ('· ' + new Date(data.updated).toLocaleString()) : '';
+      } catch (e) {
+        document.getElementById('dot').className = 'dot bad';
+        document.getElementById('statusText').textContent = 'Offline';
+        document.getElementById('miniStatus').textContent = 'Offline';
+      }
     }
 
-    try{
-      const r = await fetch('/incidents', { cache: 'no-store' });
-      const list = await r.json();
-      renderIncidents(list);
-    }catch{
-      renderIncidents([]);
-    }
-  }
-
-  refresh();
-  setInterval(refresh, 12000);
-</script>
+    refresh();
+    setInterval(refresh, 10000);
+  </script>
 </body>
 </html>`;
 }
