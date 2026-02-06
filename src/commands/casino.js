@@ -195,32 +195,66 @@ function blackjackResult(state) {
   return { outcome: 'push', ps, ds };
 }
 
+const MINES_N = 23;
+const MINES_LAYOUT = [
+  [0, 1, 2, 3, 4],
+  [5, 6, 7, 8, 9],
+  [10, 11, 12, 13, 14],
+  [15, 16, 17, 18, 19],
+  [20, 21, 22, 'cashout', 'quit']
+];
+
 function minesMakeGrid(sessionId, st) {
-  const rows = [];
   const labelFor = (i) => {
     if (!st.revealed[i]) return '·';
     if (st.mines.has(i)) return '💣';
     return '✅';
   };
-  for (let r = 0; r < 5; r++) {
+
+  return MINES_LAYOUT.map((rowSpec) => {
     const row = new ActionRowBuilder();
-    for (let c = 0; c < 5; c++) {
-      const i = r * 5 + c;
-      row.addComponents(
-        new ButtonBuilder()
-          .setCustomId(`g:${sessionId}:t${i}`)
-          .setLabel(labelFor(i))
-          .setStyle(st.revealed[i] ? (st.mines.has(i) ? ButtonStyle.Danger : ButtonStyle.Success) : ButtonStyle.Secondary)
-          .setDisabled(st.done || st.revealed[i])
-      );
+
+    for (const cell of rowSpec) {
+      if (typeof cell === 'number') {
+        const i = cell;
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`g:${sessionId}:t${i}`)
+            .setLabel(labelFor(i))
+            .setStyle(
+              st.revealed[i]
+                ? (st.mines.has(i) ? ButtonStyle.Danger : ButtonStyle.Success)
+                : ButtonStyle.Secondary
+            )
+            .setDisabled(st.done || st.revealed[i])
+        );
+        continue;
+      }
+
+      if (cell === 'cashout') {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`g:${sessionId}:cashout`)
+            .setLabel('Cashout')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(st.done || st.safeRevealed === 0)
+        );
+        continue;
+      }
+
+      if (cell === 'quit') {
+        row.addComponents(
+          new ButtonBuilder()
+            .setCustomId(`g:${sessionId}:quit`)
+            .setLabel('Quit')
+            .setStyle(ButtonStyle.Danger)
+            .setDisabled(st.done)
+        );
+      }
     }
-    rows.push(row);
-  }
-  rows.push(new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`g:${sessionId}:cashout`).setLabel('Cashout').setStyle(ButtonStyle.Primary).setDisabled(st.done || st.safeRevealed === 0),
-    new ButtonBuilder().setCustomId(`g:${sessionId}:quit`).setLabel('Quit').setStyle(ButtonStyle.Danger).setDisabled(st.done)
-  ));
-  return rows;
+
+    return row;
+  });
 }
 
 function minesChance(n, safe, k) {
@@ -237,7 +271,7 @@ function minesMultiplier(n, safe, k) {
 }
 
 function minesEmbed(st, status) {
-  const n = 25;
+  const n = st.n;
   const safe = n - st.minesCount;
   const mult = minesMultiplier(n, safe, st.safeRevealed);
   const grossProfit = Math.floor(st.bet * (mult - 1));
@@ -1131,7 +1165,7 @@ module.exports = [
 
         const mines = new Set();
         while (mines.size < minesCount) mines.add(randInt(0, 24));
-
+        
         const st = {
           bet,
           minesCount,
@@ -1164,7 +1198,7 @@ module.exports = [
             if (action === 'quit') return finish('❌ Quit', 0);
 
             if (action === 'cashout') {
-              const n = 25;
+              const n = st.n;
               const safe = n - state.minesCount;
               const mult = minesMultiplier(n, safe, state.safeRevealed);
               const grossProfit = Math.floor(state.bet * (mult - 1));
@@ -1175,13 +1209,13 @@ module.exports = [
 
             if (!action.startsWith('t')) return btn.deferUpdate().catch(() => {});
             const idx = parseInt(action.slice(1), 10);
-            if (!Number.isInteger(idx) || idx < 0 || idx > 24) return btn.deferUpdate().catch(() => {});
+            if (!Number.isInteger(idx) || idx < 0 || idx >= state.n) return btn.deferUpdate().catch(() => {});
             if (state.revealed[idx]) return btn.deferUpdate().catch(() => {});
 
             state.revealed[idx] = true;
 
             if (state.mines.has(idx)) {
-              for (let i = 0; i < 25; i++) state.revealed[i] = true;
+              for (let i = 0; i < state.n; i++) state.revealed[i] = true;
               return finish(`💥 Boom! You hit a mine. Δ -${state.bet}`, 0);
             }
 
@@ -1210,7 +1244,7 @@ module.exports = [
 
         const mines = new Set();
         while (mines.size < minesCount) mines.add(randInt(0, 24));
-
+        
         const st = {
           bet,
           minesCount,
@@ -1243,7 +1277,7 @@ module.exports = [
             if (action === 'quit') return finish('❌ Quit', 0);
 
             if (action === 'cashout') {
-              const n = 25;
+              const n = st.n;
               const safe = n - state.minesCount;
               const mult = minesMultiplier(n, safe, state.safeRevealed);
               const grossProfit = Math.floor(state.bet * (mult - 1));
@@ -1254,13 +1288,13 @@ module.exports = [
 
             if (!action.startsWith('t')) return btn.deferUpdate().catch(() => {});
             const idx = parseInt(action.slice(1), 10);
-            if (!Number.isInteger(idx) || idx < 0 || idx > 24) return btn.deferUpdate().catch(() => {});
+            if (!Number.isInteger(idx) || idx < 0 || idx >= state.n) return btn.deferUpdate().catch(() => {});
             if (state.revealed[idx]) return btn.deferUpdate().catch(() => {});
 
             state.revealed[idx] = true;
 
             if (state.mines.has(idx)) {
-              for (let i = 0; i < 25; i++) state.revealed[i] = true;
+              for (let i = 0; i < state.n; i++) state.revealed[i] = true;
               return finish(`💥 Boom! You hit a mine. Δ -${state.bet}`, 0);
             }
 
