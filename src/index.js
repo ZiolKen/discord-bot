@@ -9,6 +9,7 @@ const {
 } = require('discord.js');
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const pkg = require('../package.json');
@@ -234,7 +235,7 @@ function securityHeaders(req, res, next) {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+    "default-src 'self'; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
   );
   next();
 }
@@ -264,6 +265,7 @@ app.set('trust proxy', 1);
 app.use(cors({ origin: '*', methods: ['GET'], maxAge: 600 }));
 app.use(securityHeaders);
 app.use(createRateLimiter({ windowMs: 60_000, max: 120 }));
+app.use('/assets', express.static(path.join(__dirname, '..', 'assets'), { maxAge: '7d' }));
 
 app.get('/', (req, res) => {
   const html = renderLandingPage({
