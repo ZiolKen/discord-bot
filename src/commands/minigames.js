@@ -46,6 +46,131 @@ function disableRows(rows) {
   });
 }
 
+function blackjackControls(sessionId) {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`g:${sessionId}:hit`).setLabel('Hit').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`g:${sessionId}:stand`).setLabel('Stand').setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder().setCustomId(`g:${sessionId}:quit`).setLabel('Quit').setStyle(ButtonStyle.Danger)
+    )
+  ];
+}
+
+function blackjackEmbed(state, revealDealer, resultText) {
+  const ps = handScore(state.player);
+  const ds = revealDealer ? handScore(state.dealer) : null;
+
+  const embed = new EmbedBuilder()
+    .setTitle('🃏 Blackjack')
+    .setColor(0xFF00FF)
+    .addFields(
+      { name: 'Your hand', value: `${fmtHand(state.player)} (score **${ps}**)`, inline: false },
+      revealDealer
+        ? { name: 'Dealer hand', value: `${fmtHand(state.dealer)} (score **${ds}**)`, inline: false }
+        : { name: 'Dealer shows', value: `${state.dealer[0].r}${state.dealer[0].s} ??`, inline: false }
+    )
+    .setTimestamp();
+
+  if (typeof resultText === 'string' && resultText.length) {
+    embed.addFields({ name: 'Result', value: resultText, inline: false });
+  }
+
+  return embed;
+}
+
+function blackjackDealerPlay(state) {
+  while (handScore(state.dealer) < 17) state.dealer.push(state.deck.pop());
+}
+
+function blackjackResult(state) {
+  const ps = handScore(state.player);
+  blackjackDealerPlay(state);
+  const ds = handScore(state.dealer);
+
+  if (ps > 21) return { outcome: 'lose', ps, ds };
+  if (ds > 21) return { outcome: 'win', ps, ds };
+  if (ps > ds) return { outcome: 'win', ps, ds };
+  if (ps < ds) return { outcome: 'lose', ps, ds };
+  return { outcome: 'push', ps, ds };
+}
+
+const TTT_LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
+function tttWinner(board) {
+  for (const [a,b,c] of TTT_LINES) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+  }
+  return null;
+}
+
+function tttFull(board) {
+  return board.every(Boolean);
+}
+
+function tttBestMove(board) {
+  const empties = [];
+  for (let i = 0; i < 9; i++) if (!board[i]) empties.push(i);
+
+  for (const i of empties) {
+    board[i] = 'O';
+    if (tttWinner(board) === 'O') { board[i] = null; return i; }
+    board[i] = null;
+  }
+  for (const i of empties) {
+    board[i] = 'X';
+    if (tttWinner(board) === 'X') { board[i] = null; return i; }
+    board[i] = null;
+  }
+
+  if (!board[4]) return 4;
+  const corners = [0,2,6,8].filter(i => !board[i]);
+  if (corners.length) return corners[rand(0, corners.length - 1)];
+  return empties.length ? empties[rand(0, empties.length - 1)] : -1;
+}
+
+function tttComponents(sessionId, board, done) {
+  const label = v => (v === 'X' ? 'X' : v === 'O' ? 'O' : '·');
+  const style = v => (v === 'X' ? ButtonStyle.Danger : v === 'O' ? ButtonStyle.Success : ButtonStyle.Secondary);
+
+  const rows = [];
+  for (let r = 0; r < 3; r++) {
+    const row = new ActionRowBuilder();
+    for (let c = 0; c < 3; c++) {
+      const i = r * 3 + c;
+      row.addComponents(
+        new ButtonBuilder()
+          .setCustomId(`g:${sessionId}:m${i}`)
+          .setLabel(label(board[i]))
+          .setStyle(style(board[i]))
+          .setDisabled(done || Boolean(board[i]))
+      );
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+function tttEmbed(board, statusText) {
+  const toCell = v => (v === 'X' ? '❌' : v === 'O' ? '⭕' : '⬛');
+  const grid =
+    `${toCell(board[0])}${toCell(board[1])}${toCell(board[2])}\n` +
+    `${toCell(board[3])}${toCell(board[4])}${toCell(board[5])}\n` +
+    `${toCell(board[6])}${toCell(board[7])}${toCell(board[8])}`;
+
+  const embed = new EmbedBuilder()
+    .setTitle('🎮 Tic-Tac-Toe')
+    .setColor(0xFF00FF)
+    .setDescription(grid)
+    .setTimestamp();
+
+  if (statusText) embed.addFields({ name: 'Status', value: statusText, inline: false });
+  return embed;
+}
+
 async function ensureRow(guildId, userId) {
   return getOrCreate(guildId, userId);
 }
@@ -257,29 +382,36 @@ module.exports = [
         .addIntegerOption(o => o.setName('amount').setDescription('Bet amount').setRequired(true)),
       async run(interaction) {
         const amount = interaction.options.getInteger('amount');
-        if (amount < 1 || amount > 100000) return interaction.reply({ content: 'Amount must be 1-100000.', ephemeral: true });
-        const row = await ensureRow(interaction.guildId, interaction.user.id);
-        if (row.coins < amount) return interaction.reply({ content: 'Not enough coins.', ephemeral: true });
+        if (!Number.isInteger(amount) || amount < 1 || amount > 100000) {
+          return interaction.reply({ content: 'Amount must be 1-100000.', ephemeral: true });
+        }
+
+        const left = await trySpendCoins(interaction.guildId, interaction.user.id, amount);
+        if (left === null) return interaction.reply({ content: 'Not enough coins.', ephemeral: true });
 
         const win = Math.random() < 0.5;
-        const delta = win ? amount : -amount;
-        await addCoins(interaction.guildId, interaction.user.id, delta);
+        if (win) await addCoins(interaction.guildId, interaction.user.id, amount * 2);
+
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
-        return interaction.reply(`${win ? '✅ You won' : '❌ You lost'} **${Math.abs(delta)}** coins. Total: **${updated.coins}**`);
+        return interaction.reply(`${win ? '✅ You won' : '❌ You lost'} **${amount}** coins. Total: **${updated.coins}**`);
       }
     },
-    prefix: { async run(message, args) {
-      const amount = parseInt(args[0], 10);
-      if (!amount) return message.reply('Usage: `!gamble <amount>`');
-      if (amount < 1 || amount > 100000) return message.reply('Amount must be 1-100000.');
-      const row = await ensureRow(message.guild.id, message.author.id);
-      if (row.coins < amount) return message.reply('Not enough coins.');
-      const win = Math.random() < 0.5;
-      const delta = win ? amount : -amount;
-      await addCoins(message.guild.id, message.author.id, delta);
-      const updated = await ensureRow(message.guild.id, message.author.id);
-      return message.reply(`${win ? '✅ You won' : '❌ You lost'} ${Math.abs(delta)} coins. Total: **${updated.coins}**`);
-    } }
+    prefix: {
+      async run(message, args) {
+        const amount = parseInt(args[0], 10);
+        if (!Number.isInteger(amount)) return message.reply('Usage: `!gamble <amount>`');
+        if (amount < 1 || amount > 100000) return message.reply('Amount must be 1-100000.');
+
+        const left = await trySpendCoins(message.guild.id, message.author.id, amount);
+        if (left === null) return message.reply('Not enough coins.');
+
+        const win = Math.random() < 0.5;
+        if (win) await addCoins(message.guild.id, message.author.id, amount * 2);
+
+        const updated = await ensureRow(message.guild.id, message.author.id);
+        return message.reply(`${win ? '✅ You won' : '❌ You lost'} ${amount} coins. Total: **${updated.coins}**`);
+      }
+    }
   },
 
   {
@@ -294,155 +426,258 @@ module.exports = [
         .addIntegerOption(o => o.setName('bet').setDescription('Bet amount').setRequired(true)),
       async run(interaction) {
         const bet = interaction.options.getInteger('bet');
-        if (bet < 1 || bet > 100000) return interaction.reply({ content: 'Bet must be 1-100000.', ephemeral: true });
-        const row = await ensureRow(interaction.guildId, interaction.user.id);
-        if (row.coins < bet) return interaction.reply({ content: 'Not enough coins.', ephemeral: true });
+        if (!Number.isInteger(bet) || bet < 1 || bet > 100000) {
+          return interaction.reply({ content: 'Bet must be 1-100000.', ephemeral: true });
+        }
+
+        const left = await trySpendCoins(interaction.guildId, interaction.user.id, bet);
+        if (left === null) return interaction.reply({ content: 'Not enough coins.', ephemeral: true });
 
         const symbols = ['🍒','🍋','🍉','⭐','💎'];
-        const a = symbols[rand(0,4)], b = symbols[rand(0,4)], c = symbols[rand(0,4)];
+        const a = symbols[rand(0, 4)];
+        const b = symbols[rand(0, 4)];
+        const c = symbols[rand(0, 4)];
+
         let mult = 0;
         if (a === b && b === c) mult = a === '💎' ? 5 : 3;
         else if (a === b || b === c || a === c) mult = 1;
 
-        const delta = mult === 0 ? -bet : bet * mult;
-        await addCoins(interaction.guildId, interaction.user.id, delta);
+        const payout = mult > 0 ? bet * (mult + 1) : 0;
+        if (payout) await addCoins(interaction.guildId, interaction.user.id, payout);
+
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
+        const delta = mult === 0 ? -bet : bet * mult;
 
         return interaction.reply(`🎰 ${a} ${b} ${c}\n${mult === 0 ? '❌ Lose' : `✅ Win x${mult}`} (**${delta}** coins)\nTotal: **${updated.coins}**`);
       }
     },
-    prefix: { async run(message, args) {
-      const bet = parseInt(args[0], 10);
-      if (!bet) return message.reply('Usage: `!slots <bet>`');
-      if (bet < 1 || bet > 100000) return message.reply('Bet must be 1-100000.');
-      const row = await ensureRow(message.guild.id, message.author.id);
-      if (row.coins < bet) return message.reply('Not enough coins.');
-      const symbols = ['🍒','🍋','🍉','⭐','💎'];
-      const a = symbols[rand(0,4)], b = symbols[rand(0,4)], c = symbols[rand(0,4)];
-      let mult = 0;
-      if (a === b && b === c) mult = a === '💎' ? 5 : 3;
-      else if (a === b || b === c || a === c) mult = 1;
+    prefix: {
+      async run(message, args) {
+        const bet = parseInt(args[0], 10);
+        if (!Number.isInteger(bet)) return message.reply('Usage: `!slots <bet>`');
+        if (bet < 1 || bet > 100000) return message.reply('Bet must be 1-100000.');
 
-      const delta = mult === 0 ? -bet : bet * mult;
-      await addCoins(message.guild.id, message.author.id, delta);
-      const updated = await ensureRow(message.guild.id, message.author.id);
+        const left = await trySpendCoins(message.guild.id, message.author.id, bet);
+        if (left === null) return message.reply('Not enough coins.');
 
-      return message.reply(`🎰 ${a} ${b} ${c}\n${mult === 0 ? '❌ Lose' : `✅ Win x${mult}`} (${delta} coins)\nTotal: **${updated.coins}**`);
-    } }
+        const symbols = ['🍒','🍋','🍉','⭐','💎'];
+        const a = symbols[rand(0, 4)];
+        const b = symbols[rand(0, 4)];
+        const c = symbols[rand(0, 4)];
+
+        let mult = 0;
+        if (a === b && b === c) mult = a === '💎' ? 5 : 3;
+        else if (a === b || b === c || a === c) mult = 1;
+
+        const payout = mult > 0 ? bet * (mult + 1) : 0;
+        if (payout) await addCoins(message.guild.id, message.author.id, payout);
+
+        const updated = await ensureRow(message.guild.id, message.author.id);
+        const delta = mult === 0 ? -bet : bet * mult;
+
+        return message.reply(`🎰 ${a} ${b} ${c}\n${mult === 0 ? '❌ Lose' : `✅ Win x${mult}`} (${delta} coins)\nTotal: **${updated.coins}**`);
+      }
+    }
   },
 
   {
     name: 'blackjack',
     aliases: ['bj'],
     category: 'minigames',
-    description: 'Blackjack vs dealer (single-player)',
+    description: 'Blackjack vs dealer',
     slash: {
       data: new SlashCommandBuilder()
         .setName('blackjack')
-        .setDescription('Play blackjack (single-player)')
+        .setDescription('Play blackjack (interactive)')
         .addIntegerOption(o => o.setName('bet').setDescription('Bet amount').setRequired(true)),
       async run(interaction) {
         const bet = interaction.options.getInteger('bet');
-        if (bet < 1 || bet > 100000) return interaction.reply({ content: 'Bet must be 1-100000.', ephemeral: true });
-        const row = await ensureRow(interaction.guildId, interaction.user.id);
-        if (row.coins < bet) return interaction.reply({ content: 'Not enough coins.', ephemeral: true });
-
-        function draw() {
-          const cards = [2,3,4,5,6,7,8,9,10,10,10,10,11];
-          return cards[rand(0, cards.length-1)];
-        }
-        function score(hand) {
-          let s = hand.reduce((a,b)=>a+b,0);
-          let aces = hand.filter(x=>x===11).length;
-          while (s > 21 && aces > 0) { s -= 10; aces--; }
-          return s;
+        if (!Number.isInteger(bet) || bet < 1 || bet > 100000) {
+          return interaction.reply({ content: 'Bet must be 1-100000.', ephemeral: true });
         }
 
-        const player = [draw(), draw()];
-        const dealer = [draw(), draw()];
+        const left = await trySpendCoins(interaction.guildId, interaction.user.id, bet);
+        if (left === null) return interaction.reply({ content: 'Not enough coins.', ephemeral: true });
 
-        while (score(player) < 16) player.push(draw());
-        while (score(dealer) < 17) dealer.push(draw());
+        const state = {
+          bet,
+          deck: buildDeck(),
+          player: [],
+          dealer: []
+        };
+        state.player.push(state.deck.pop(), state.deck.pop());
+        state.dealer.push(state.deck.pop(), state.deck.pop());
 
-        const ps = score(player);
-        const ds = score(dealer);
+        const ps0 = handScore(state.player);
+        const ds0 = handScore(state.dealer);
 
-        let result = 'draw';
-        if (ps > 21 && ds > 21) result = 'draw';
-        else if (ps > 21) result = 'lose';
-        else if (ds > 21) result = 'win';
-        else if (ps > ds) result = 'win';
-        else if (ps < ds) result = 'lose';
+        const playerBJ = ps0 === 21 && state.player.length === 2;
+        const dealerBJ = ds0 === 21 && state.dealer.length === 2;
 
-        let delta = 0;
-        if (result === 'win') delta = bet;
-        else if (result === 'lose') delta = -bet;
+        const settleImmediate = async () => {
+          let resultText = '🤝 Push (refund)';
+          let payout = bet;
+          if (playerBJ && !dealerBJ) {
+            payout = Math.floor(bet * 2.5);
+            resultText = `🟣 Blackjack! (+${payout - bet})`;
+          } else if (!playerBJ && dealerBJ) {
+            payout = 0;
+            resultText = `❌ Dealer blackjack (-${bet})`;
+          }
+          if (payout) await addCoins(interaction.guildId, interaction.user.id, payout);
+          const updated = await ensureRow(interaction.guildId, interaction.user.id);
+          const embed = blackjackEmbed(state, true, resultText).addFields({ name: 'Total coins', value: String(updated.coins), inline: true });
+          return interaction.reply({ embeds: [embed] });
+        };
 
-        await addCoins(interaction.guildId, interaction.user.id, delta);
-        const updated = await ensureRow(interaction.guildId, interaction.user.id);
+        if (playerBJ || dealerBJ) return settleImmediate();
 
-        const embed = new EmbedBuilder()
-          .setTitle('🃏 Blackjack')
-          .setColor(0xFF00FF)
-          .addFields(
-            { name: 'Your hand', value: `${player.join(', ')} (score **${ps}**)`, inline: false },
-            { name: 'Dealer hand', value: `${dealer.join(', ')} (score **${ds}**)`, inline: false },
-            { name: 'Result', value: result === 'win' ? `✅ Win (+${bet})` : result === 'lose' ? `❌ Lose (-${bet})` : '🤝 Draw', inline: false },
-            { name: 'Total coins', value: String(updated.coins), inline: true }
-          )
-          .setTimestamp();
+        const sessionId = createSession({
+          type: 'blackjack',
+          ownerId: interaction.user.id,
+          guildId: interaction.guildId,
+          channelId: interaction.channelId,
+          state,
+          async onAction(btn, action, s) {
+            const st = s.state;
 
-        return interaction.reply({ embeds: [embed] });
+            const finish = async (outcome) => {
+              let resultText = '🤝 Push (refund)';
+              let payout = st.bet;
+
+              if (outcome === 'win') { resultText = `✅ Win (+${st.bet})`; payout = st.bet * 2; }
+              if (outcome === 'lose') { resultText = `❌ Lose (-${st.bet})`; payout = 0; }
+
+              if (payout) await addCoins(btn.guildId, s.ownerId, payout);
+              const updated = await ensureRow(btn.guildId, s.ownerId);
+
+              const embed = blackjackEmbed(st, true, resultText)
+                .addFields({ name: 'Total coins', value: String(updated.coins), inline: true });
+
+              endSession(s.id);
+              return btn.update({ embeds: [embed], components: disableRows(btn.message.components) }).catch(() => {});
+            };
+
+            const refresh = async () => {
+              const embed = blackjackEmbed(st, false, `Bet: **${st.bet}** coins`);
+              return btn.update({ embeds: [embed], components: blackjackControls(s.id) }).catch(() => {});
+            };
+
+            if (action === 'hit') {
+              st.player.push(st.deck.pop());
+              if (handScore(st.player) > 21) return finish('lose');
+              return refresh();
+            }
+
+            if (action === 'stand') {
+              const { outcome } = blackjackResult(st);
+              return finish(outcome);
+            }
+
+            if (action === 'quit') return finish('lose');
+
+            return btn.deferUpdate().catch(() => {});
+          }
+        });
+
+        const embed = blackjackEmbed(state, false, `Bet: **${bet}** coins`);
+        return interaction.reply({ embeds: [embed], components: blackjackControls(sessionId) });
       }
     },
-    prefix: { async run(message, args) {
-      const bet = parseInt(args[0], 10);
-      if (!bet) return message.reply('Usage: `!blackjack <bet>`');
-      if (bet < 1 || bet > 100000) return message.reply('Bet must be 1-100000.');
-      const row = await ensureRow(message.guild.id, message.author.id);
-      if (row.coins < bet) return message.reply('Not enough coins.');
+    prefix: {
+      async run(message, args) {
+        const bet = parseInt(args[0], 10);
+        if (!Number.isInteger(bet)) return message.reply('Usage: `!blackjack <bet>`');
+        if (bet < 1 || bet > 100000) return message.reply('Bet must be 1-100000.');
 
-      function draw() {
-        const cards = [2,3,4,5,6,7,8,9,10,10,10,10,11];
-        return cards[rand(0, cards.length-1)];
+        const left = await trySpendCoins(message.guild.id, message.author.id, bet);
+        if (left === null) return message.reply('Not enough coins.');
+
+        const state = {
+          bet,
+          deck: buildDeck(),
+          player: [],
+          dealer: []
+        };
+        state.player.push(state.deck.pop(), state.deck.pop());
+        state.dealer.push(state.deck.pop(), state.deck.pop());
+
+        const ps0 = handScore(state.player);
+        const ds0 = handScore(state.dealer);
+
+        const playerBJ = ps0 === 21 && state.player.length === 2;
+        const dealerBJ = ds0 === 21 && state.dealer.length === 2;
+
+        const settleImmediate = async () => {
+          let resultText = '🤝 Push (refund)';
+          let payout = bet;
+          if (playerBJ && !dealerBJ) {
+            payout = Math.floor(bet * 2.5);
+            resultText = `🟣 Blackjack! (+${payout - bet})`;
+          } else if (!playerBJ && dealerBJ) {
+            payout = 0;
+            resultText = `❌ Dealer blackjack (-${bet})`;
+          }
+          if (payout) await addCoins(message.guild.id, message.author.id, payout);
+          const updated = await ensureRow(message.guild.id, message.author.id);
+          const embed = blackjackEmbed(state, true, resultText).addFields({ name: 'Total coins', value: String(updated.coins), inline: true });
+          return message.reply({ embeds: [embed] });
+        };
+
+        if (playerBJ || dealerBJ) return settleImmediate();
+
+        const sessionId = createSession({
+          type: 'blackjack',
+          ownerId: message.author.id,
+          guildId: message.guild.id,
+          channelId: message.channelId,
+          state,
+          async onAction(btn, action, s) {
+            const st = s.state;
+
+            const finish = async (outcome) => {
+              let resultText = '🤝 Push (refund)';
+              let payout = st.bet;
+
+              if (outcome === 'win') { resultText = `✅ Win (+${st.bet})`; payout = st.bet * 2; }
+              if (outcome === 'lose') { resultText = `❌ Lose (-${st.bet})`; payout = 0; }
+
+              if (payout) await addCoins(btn.guildId, s.ownerId, payout);
+              const updated = await ensureRow(btn.guildId, s.ownerId);
+
+              const embed = blackjackEmbed(st, true, resultText)
+                .addFields({ name: 'Total coins', value: String(updated.coins), inline: true });
+
+              endSession(s.id);
+              return btn.update({ embeds: [embed], components: disableRows(btn.message.components) }).catch(() => {});
+            };
+
+            const refresh = async () => {
+              const embed = blackjackEmbed(st, false, `Bet: **${st.bet}** coins`);
+              return btn.update({ embeds: [embed], components: blackjackControls(s.id) }).catch(() => {});
+            };
+
+            if (action === 'hit') {
+              st.player.push(st.deck.pop());
+              if (handScore(st.player) > 21) return finish('lose');
+              return refresh();
+            }
+
+            if (action === 'stand') {
+              const { outcome } = blackjackResult(st);
+              return finish(outcome);
+            }
+
+            if (action === 'quit') return finish('lose');
+
+            return btn.deferUpdate().catch(() => {});
+          }
+        });
+
+        const embed = blackjackEmbed(state, false, `Bet: **${bet}** coins`);
+        return message.reply({ embeds: [embed], components: blackjackControls(sessionId) });
       }
-      function score(hand) {
-        let s = hand.reduce((a,b)=>a+b,0);
-        let aces = hand.filter(x=>x===11).length;
-        while (s > 21 && aces > 0) { s -= 10; aces--; }
-        return s;
-      }
-
-      const player = [draw(), draw()];
-      const dealer = [draw(), draw()];
-      while (score(player) < 16) player.push(draw());
-      while (score(dealer) < 17) dealer.push(draw());
-
-      const ps = score(player);
-      const ds = score(dealer);
-
-      let result = 'draw';
-      if (ps > 21 && ds > 21) result = 'draw';
-      else if (ps > 21) result = 'lose';
-      else if (ds > 21) result = 'win';
-      else if (ps > ds) result = 'win';
-      else if (ps < ds) result = 'lose';
-
-      let delta = 0;
-      if (result === 'win') delta = bet;
-      else if (result === 'lose') delta = -bet;
-
-      await addCoins(message.guild.id, message.author.id, delta);
-      const updated = await ensureRow(message.guild.id, message.author.id);
-
-      return message.reply(
-        `🃏 Blackjack\n` +
-        `You: ${player.join(', ')} (score ${ps})\n` +
-        `Dealer: ${dealer.join(', ')} (score ${ds})\n` +
-        `${result === 'win' ? `✅ Win (+${bet})` : result === 'lose' ? `❌ Lose (-${bet})` : '🤝 Draw'}\n` +
-        `Total: **${updated.coins}** coins`
-      );
-    } }
+    }
   },
 
   {
@@ -469,7 +704,7 @@ module.exports = [
         ];
         const pick = outcomes[rand(0, outcomes.length-1)];
         if (pick.coins > 0) await addCoins(interaction.guildId, interaction.user.id, pick.coins);
-        await db.query(`UPDATE user_stats SET fish_at=now() WHERE guild_id=$1 AND user_id=$2`, [interaction.guildId, interaction.user.id]);
+        await setClaim(interaction.guildId, interaction.user.id, 'fish_at');
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
         return interaction.reply(`🎣 ${pick.msg} ${pick.coins ? `(+${pick.coins} coins)` : ''}\nTotal: **${updated.coins}**`);
       }
@@ -490,7 +725,7 @@ module.exports = [
       ];
       const pick = outcomes[rand(0, outcomes.length-1)];
       if (pick.coins > 0) await addCoins(message.guild.id, message.author.id, pick.coins);
-      await db.query(`UPDATE user_stats SET fish_at=now() WHERE guild_id=$1 AND user_id=$2`, [message.guild.id, message.author.id]);
+      await setClaim(message.guild.id, message.author.id, 'fish_at');
       const updated = await ensureRow(message.guild.id, message.author.id);
       return message.reply(`🎣 ${pick.msg} ${pick.coins ? `(+${pick.coins} coins)` : ''}\nTotal: **${updated.coins}**`);
     } }
@@ -558,5 +793,111 @@ module.exports = [
       });
     } }
   },
+  
+  {
+    name: 'tictactoe',
+    aliases: ['ttt'],
+    category: 'minigames',
+    description: 'Tic-Tac-Toe vs bot',
+    slash: {
+      data: new SlashCommandBuilder().setName('tictactoe').setDescription('Play Tic-Tac-Toe vs bot (buttons)'),
+      async run(interaction) {
+        const board = Array(9).fill(null);
+
+        const sessionId = createSession({
+          type: 'tictactoe',
+          ownerId: interaction.user.id,
+          guildId: interaction.guildId,
+          channelId: interaction.channelId,
+          state: { board, done: false },
+          async onAction(btn, action, s) {
+            const st = s.state;
+
+            const end = async (statusText) => {
+              st.done = true;
+              if (statusText.includes('(+80 coins)')) await addCoins(btn.guildId, s.ownerId, 80);
+              if (statusText.includes('(+30 coins)')) await addCoins(btn.guildId, s.ownerId, 30);
+              const embed = tttEmbed(st.board, statusText);
+              endSession(s.id);
+              return btn.update({ embeds: [embed], components: disableRows(btn.message.components) }).catch(() => {});
+            };
+
+            if (st.done) return btn.deferUpdate().catch(() => {});
+            if (!action.startsWith('m')) return btn.deferUpdate().catch(() => {});
+            const idx = parseInt(action.slice(1), 10);
+            if (!Number.isInteger(idx) || idx < 0 || idx > 8) return btn.deferUpdate().catch(() => {});
+            if (st.board[idx]) return btn.reply({ content: 'That spot is taken.', ephemeral: true }).catch(() => {});
+
+            st.board[idx] = 'X';
+            const w1 = tttWinner(st.board);
+            if (w1 === 'X') return end('✅ You win! (+80 coins)');
+            if (tttFull(st.board)) return end('🤝 Draw (+30 coins)');
+
+            const botMove = tttBestMove(st.board);
+            if (botMove >= 0) st.board[botMove] = 'O';
+
+            const w2 = tttWinner(st.board);
+            if (w2 === 'O') return end('❌ You lose');
+            if (tttFull(st.board)) return end('🤝 Draw (+30 coins)');
+
+            const embed = tttEmbed(st.board, 'Your turn');
+            return btn.update({ embeds: [embed], components: tttComponents(s.id, st.board, false) }).catch(() => {});
+          }
+        });
+
+        const embed = tttEmbed(board, 'Your turn');
+        return interaction.reply({ embeds: [embed], components: tttComponents(sessionId, board, false) });
+      }
+    },
+    prefix: {
+      async run(message) {
+        const board = Array(9).fill(null);
+
+        const sessionId = createSession({
+          type: 'tictactoe',
+          ownerId: message.author.id,
+          guildId: message.guild.id,
+          channelId: message.channelId,
+          state: { board, done: false },
+          async onAction(btn, action, s) {
+            const st = s.state;
+
+            const end = async (statusText) => {
+              st.done = true;
+              if (statusText.includes('(+80 coins)')) await addCoins(btn.guildId, s.ownerId, 80);
+              if (statusText.includes('(+30 coins)')) await addCoins(btn.guildId, s.ownerId, 30);
+              const embed = tttEmbed(st.board, statusText);
+              endSession(s.id);
+              return btn.update({ embeds: [embed], components: disableRows(btn.message.components) }).catch(() => {});
+            };
+
+            if (st.done) return btn.deferUpdate().catch(() => {});
+            if (!action.startsWith('m')) return btn.deferUpdate().catch(() => {});
+            const idx = parseInt(action.slice(1), 10);
+            if (!Number.isInteger(idx) || idx < 0 || idx > 8) return btn.deferUpdate().catch(() => {});
+            if (st.board[idx]) return btn.reply({ content: 'That spot is taken.', ephemeral: true }).catch(() => {});
+
+            st.board[idx] = 'X';
+            const w1 = tttWinner(st.board);
+            if (w1 === 'X') return end('✅ You win! (+80 coins)');
+            if (tttFull(st.board)) return end('🤝 Draw (+30 coins)');
+
+            const botMove = tttBestMove(st.board);
+            if (botMove >= 0) st.board[botMove] = 'O';
+
+            const w2 = tttWinner(st.board);
+            if (w2 === 'O') return end('❌ You lose');
+            if (tttFull(st.board)) return end('🤝 Draw (+30 coins)');
+
+            const embed = tttEmbed(st.board, 'Your turn');
+            return btn.update({ embeds: [embed], components: tttComponents(s.id, st.board, false) }).catch(() => {});
+          }
+        });
+
+        const embed = tttEmbed(board, 'Your turn');
+        return message.reply({ embeds: [embed], components: tttComponents(sessionId, board, false) });
+      }
+    }
+  }
 
 ];
