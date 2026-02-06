@@ -296,7 +296,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
     <header class="top">
       <div class="brand">${avatar}<span>${safeName}</span></div>
       <nav class="nav">
-        <a href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer>Status</a>
+        <a href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer">Status</a>
         <a href="${invite}" target="_blank" rel="noopener noreferrer">Invite</a>
         <a class="cta" href="https://github.com/ZiolKen/discord-bot" target="_blank" rel="noopener noreferrer">Github</a>
       </nav>
@@ -304,7 +304,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
 
     <main class="hero" id="home">
       <section class="card left">
-        <h1 class="title">ZiolKen</h1>
+        <h1 class="title">⚡ ZiolKen</h1>
         <div class="subtitle">• Discord Bot</div>
         <p class="desc">
           A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL.
@@ -315,78 +315,25 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
           <a class="btn" href="${support}" target="_blank" rel="noopener noreferrer">Support</a>
           <a class="btn" href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer">Status</a>
         </div>
-      </section>
-
-      <aside class="card right" id="about">
-        <h2 class="panelTitle">Live</h2>
-        <div class="kv">
-          <div class="item">
-            <div class="k">Status</div>
-            <div class="v" id="statusText">…</div>
-          </div>
-          <div class="item">
-            <div class="k">Ping</div>
-            <div class="v"><span id="ping">—</span> ms</div>
-          </div>
-          <div class="item">
-            <div class="k">Guilds</div>
-            <div class="v" id="guilds">—</div>
-          </div>
-          <div class="item">
-            <div class="k">Uptime</div>
-            <div class="v" id="uptime">—</div>
-          </div>
-        </div>
         <p class="muted">
           The bot also includes an Express-powered web server for a real-time status page and landing page.
         </p>
-      </aside>
+      </section>
     </main>
 
     <footer class="statusbar" id="status">
       <div class="statusInner">
         <div class="pill">
-          <span id="dot" class="dot"></span>
-          <span><span id="miniStatus">Loading</span> <span class="muted" id="updated"></span></span>
+          <span><span id="miniStatus">Version: 1.3.2</span> <span class="muted" id="updated"></span></span>
         </div>
         <div class="rightMini">
-          <span class="pill">Version <span class="muted" id="version">1.3.2</span></span>
+          <span class="pill">Node <span class="muted" id="version">20.20.0</span></span>
           <span class="pill">Host <span class="muted" id="host">Render</span></span>
           <a class="pill linkish" href="${invite}">Invite</a>
         </div>
       </div>
     </footer>
   </div>
-
-  <script>
-    async function refresh() {
-      try {
-        const res = await fetch('${status}', { cache: 'no-store' });
-        const data = await res.json();
-
-        const ok = data && data.status === 'online';
-        document.getElementById('dot').className = 'dot ' + (ok ? 'ok' : 'bad');
-
-        document.getElementById('statusText').textContent = ok ? 'Online' : 'Offline';
-        document.getElementById('miniStatus').textContent = ok ? 'Online' : 'Offline';
-
-        document.getElementById('ping').textContent = (data.ping ?? '—');
-        document.getElementById('guilds').textContent = (data.guilds ?? '—');
-        document.getElementById('uptime').textContent = (data.uptime ?? '—');
-
-        document.getElementById('version').textContent = (data.version ?? '—');
-        document.getElementById('host').textContent = (data.host ?? '—');
-        document.getElementById('updated').textContent = data.updated ? ('· ' + new Date(data.updated).toLocaleString()) : '';
-      } catch (e) {
-        document.getElementById('dot').className = 'dot bad';
-        document.getElementById('statusText').textContent = 'Offline';
-        document.getElementById('miniStatus').textContent = 'Offline';
-      }
-    }
-
-    refresh();
-    setInterval(refresh, 10000);
-  </script>
 </body>
 </html>`;
 }
