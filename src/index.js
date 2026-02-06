@@ -74,7 +74,7 @@ const afkMap = new Map();
 
 client.once(Events.ClientReady, async () => {
   console.log(`Logged in as ${client.user.tag}`);
-  client.user.setActivity({ name: 'Utilities + Minigames', type: ActivityType.Playing });
+  client.user.setActivity({ name: '/help | botstatus.vercel.app', type: ActivityType.Playing });
 
   try {
     await rest.put(Routes.applicationCommands(process.env.CLIENT_ID), { body: buildSlashJSON() });
@@ -91,7 +91,7 @@ client.once(Events.ClientReady, async () => {
   setInterval(() => {
     if (!client.ws) return;
     console.log(`Ping: ${client.ws.ping.toFixed(2)}ms`);
-  }, 30_000);
+  }, 90_000);
 
   setInterval(async () => {
     try {
