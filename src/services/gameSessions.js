@@ -27,6 +27,7 @@ function createSession(data) {
     type: data.type,
     ownerId: data.ownerId,
     allowUsers: data.allowUsers || null,
+    allowAll: Boolean(data.allowAll),
     guildId: data.guildId,
     channelId: data.channelId,
     messageId: data.messageId || null,
@@ -42,6 +43,7 @@ function endSession(sessionId) {
 }
 
 function isAllowed(session, userId) {
+  if (session.allowAll) return true;
   if (userId === session.ownerId) return true;
   if (session.allowUsers && session.allowUsers.has(userId)) return true;
   return false;
@@ -58,18 +60,18 @@ async function handleButton(interaction) {
   const s = sessions.get(sessionId);
 
   if (!s) {
-    await interaction.reply({ content: 'This game has expired.', ephemeral: true }).catch(() => {});
+    await interaction.reply({ content: 'This interaction has expired.', ephemeral: true }).catch(() => {});
     return true;
   }
 
   if (Date.now() > s.expiresAt) {
     sessions.delete(sessionId);
-    await interaction.reply({ content: 'This game has expired.', ephemeral: true }).catch(() => {});
+    await interaction.reply({ content: 'This interaction has expired.', ephemeral: true }).catch(() => {});
     return true;
   }
 
   if (!isAllowed(s, interaction.user.id)) {
-    await interaction.reply({ content: 'You are not a player in this game.', ephemeral: true }).catch(() => {});
+    await interaction.reply({ content: 'You are not allowed to use this.', ephemeral: true }).catch(() => {});
     return true;
   }
 
@@ -77,7 +79,7 @@ async function handleButton(interaction) {
     s.expiresAt = Date.now() + DEFAULT_TTL_MS;
     await s.onAction(interaction, action, s);
   } catch {
-    await interaction.reply({ content: 'Game error.', ephemeral: true }).catch(() => {});
+    await interaction.reply({ content: 'Interaction error.', ephemeral: true }).catch(() => {});
   }
 
   return true;
