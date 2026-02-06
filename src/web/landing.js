@@ -36,17 +36,34 @@ const LOWPOLY = svgDataUri(`
 `);
 
 function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statusUrl }) {
-  const safeName = String(appName || 'NAME COMPANY');
-  const invite = String(inviteUrl || '#');
-  const support = String(supportServer || '#');
+  const safeName = String(appName || 'ジオルケン');
+  const invite = String(inviteUrl || 'https://discord.com/oauth2/authorize?client_id=1398238289500307578&scope=bot&permissions=8');
+  const support = String(supportServer || 'https://discord.gg/X7QrJvx7Sp');
   const status = String(statusUrl || '/status');
-  const avatar = botAvatar ? `<img class="brand__avatar" src="${botAvatar}" alt="${safeName}"/>` : '';
+  const avatar = botAvatar ? `<img class="brand__avatar" src="../../assets/logo.png" alt="ジオルケン"/>` : '';
 
   return `<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="icon" type="image/png" href="../../assets/logo.png" />
+  <link rel="shortcut icon" href="../../assets/logo.png" />
+  <link rel="apple-touch-icon" size="180x180" href="../../assets/logo.png" />
+  <meta content="ie=edge" http-equiv="X-UA-Compatible" />
+  <meta name="theme-color" content="#0b0b10" />
+  <link rel="manifest" href="../../assets/manifest.json" />
+  <meta name="description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
+  <meta property="og:title" content="ZiolKen Bot" />
+  <meta property="og:description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://discord-bot-us.onrender.com/" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:site_name" content="ZiolKen Bot" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ZiolKen Bot" />
+  <meta name="twitter:description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
   <title>${safeName}</title>
   <style>
     :root{
@@ -279,26 +296,24 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
     <header class="top">
       <div class="brand">${avatar}<span>${safeName}</span></div>
       <nav class="nav">
-        <a href="#home">Home</a>
-        <a href="#profile">Profile</a>
-        <a href="#about">About Us</a>
-        <a href="#contacts">Contacts</a>
-        <a class="cta" href="${invite}">Sign Up</a>
+        <a href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer>Status</a>
+        <a href="${invite}" target="_blank" rel="noopener noreferrer">Invite</a>
+        <a class="cta" href="https://github.com/ZiolKen/discord-bot" target="_blank" rel="noopener noreferrer">Github</a>
       </nav>
     </header>
 
     <main class="hero" id="home">
       <section class="card left">
-        <h1 class="title">Landing Page</h1>
-        <div class="subtitle">Creative Design</div>
+        <h1 class="title">ZiolKen</h1>
+        <div class="subtitle">• Discord Bot</div>
         <p class="desc">
-          Minimal, modern landing page for ${safeName}. Add the bot, explore commands, and track availability.
-          Built for long-term stability with a compact status footer.
+          A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL.
+          It features a comprehensive suite of tools for server management, user engagement, and entertainment, supporting both slash (/) and legacy prefix commands (default !).
         </p>
         <div class="actions">
-          <a class="btn primary" href="${invite}">Sign Up</a>
-          <a class="btn" href="${support}">Login</a>
-          <a class="btn" href="#status">Status</a>
+          <a class="btn primary" href="${invite}" target="_blank" rel="noopener noreferrer">Invite</a>
+          <a class="btn" href="${support}" target="_blank" rel="noopener noreferrer">Support</a>
+          <a class="btn" href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer">Status</a>
         </div>
       </section>
 
@@ -322,8 +337,8 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
             <div class="v" id="uptime">—</div>
           </div>
         </div>
-        <p class="desc muted" style="margin-top:14px">
-          Prefer a cleaner landing? This page keeps the status minimal and tucked to the bottom.
+        <p class="muted">
+          The bot also includes an Express-powered web server for a real-time status page and landing page.
         </p>
       </aside>
     </main>
@@ -335,8 +350,8 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
           <span><span id="miniStatus">Loading</span> <span class="muted" id="updated"></span></span>
         </div>
         <div class="rightMini">
-          <span class="pill">Version <span class="muted" id="version">—</span></span>
-          <span class="pill">Host <span class="muted" id="host">—</span></span>
+          <span class="pill">Version <span class="muted" id="version">1.3.2</span></span>
+          <span class="pill">Host <span class="muted" id="host">Render</span></span>
           <a class="pill linkish" href="${invite}">Invite</a>
         </div>
       </div>
