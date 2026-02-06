@@ -102,15 +102,17 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
             </div>
           </a>
 
-          <nav class="nav" aria-label="Primary navigation">
+          <nav class="nav" style="justify-content: center;align-items: center" aria-label="Primary navigation">
             <a href="#features" class="zzz">Features</a>
             <a href="#stack" class="zzz">Stack</a>
             <a href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer" class="zzz grad">Live Status</a>
-            <a class="btn btnPrimary" data-bind-href="invite" href="#" target="_blank" rel="noopener noreferrer">
+          </nav>
+          <nav class="nav" aria-label="Nav">
+            <a class="btn btnPrimary" data-bind-href="invite" href="${invite}" target="_blank" rel="noopener noreferrer">
               Invite
               <span class="kbd">+</span>
             </a>
-            <a class="btn" data-bind-href="github" href="#" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a class="btn" data-bind-href="github" href="https://github.com/ZiolKen/discord-bot" target="_blank" rel="noopener noreferrer">GitHub</a>
           </nav>
         </div>
       </div>
@@ -139,8 +141,8 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
                   Invite to Discord
                   <span class="kbd">↗</span>
                 </a>
-                <a class="btn" data-bind-href="support" href="#" target="_blank" rel="noopener noreferrer">Support</a>
-                <a class="btn" data-bind-href="status" href="#" target="_blank" rel="noopener noreferrer">Live Status</a>
+                <a class="btn" data-bind-href="support" href="${support}" target="_blank" rel="noopener noreferrer">Support</a>
+                <a class="btn" data-bind-href="status" href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer">Live Status</a>
               </div>
 
               <div class="heroMeta reveal" role="list">
@@ -397,8 +399,8 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
               </div>
 
               <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:wrap">
-                <a class="btn btnPrimary" data-bind-href="invite" href="#" target="_blank" rel="noopener noreferrer">Invite now</a>
-                <a class="btn" data-bind-href="github" href="#" target="_blank" rel="noopener noreferrer">View source</a>
+                <a class="btn btnPrimary" data-bind-href="invite" href="${invite}" target="_blank" rel="noopener noreferrer">Invite now</a>
+                <a class="btn" data-bind-href="github" href="https://github.com/ZiolKen/discord-bot" target="_blank" rel="noopener noreferrer">View source</a>
               </div>
             </div>
           </div>
