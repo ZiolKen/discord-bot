@@ -266,6 +266,7 @@ app.use(cors({ origin: '*', methods: ['GET'], maxAge: 600 }));
 app.use(securityHeaders);
 app.use(createRateLimiter({ windowMs: 60_000, max: 120 }));
 app.use('/assets', express.static(path.join(__dirname, '..', 'assets'), { maxAge: '7d' }));
+app.use('/src/web', express.static(path.join(__dirname, '..', 'src/web'), {maxAge: '7d' }));
 
 app.get('/', (req, res) => {
   const html = renderLandingPage({
