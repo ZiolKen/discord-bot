@@ -1,4 +1,5 @@
 const db = require('../db');
+const { capInt32 } = require('./casino');
 
 const CLAIM_FIELDS = new Set(['daily_at', 'weekly_at', 'fish_at']);
 
@@ -14,13 +15,16 @@ async function getOrCreate(guildId, userId) {
 }
 
 async function addCoins(guildId, userId, amount) {
+  if (!Number.isInteger(amount) || amount <= 0) throw new Error('Invalid add amount');
+
+  const add = capInt32(amount);
   const { rows } = await db.query(
     `INSERT INTO user_stats (guild_id, user_id, coins)
      VALUES ($1,$2,$3)
      ON CONFLICT (guild_id,user_id) DO UPDATE
-       SET coins = user_stats.coins + EXCLUDED.coins
+       SET coins = LEAST(2147483647, GREATEST(0, user_stats.coins + EXCLUDED.coins))
      RETURNING coins`,
-    [guildId, userId, amount]
+    [guildId, userId, add]
   );
   return rows[0].coins;
 }
