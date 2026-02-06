@@ -26,6 +26,9 @@ function renderLandingPage(opts) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark light" />
+  <link rel="icon" type="image/png" href="https://files.catbox.moe/ztyeik.png" />
+  <link rel="shortcut icon" href="https://files.catbox.moe/ztyeik.png" />
+  <link rel="apple-touch-icon" size="180x180" href="https://files.catbox.moe/ztyeik.png" />
   <title>${title}</title>
   <style>
     :root{
@@ -67,9 +70,7 @@ function renderLandingPage(opts) {
     .brand{display:flex;align-items:center;gap:12px}
     .logo{
       width:44px;height:44px;border-radius:12px;
-      background:
-        radial-gradient(12px 12px at 30% 30%, #ffffff66 0%, transparent 60%),
-        linear-gradient(135deg,#7c4dff,#00d4ff);
+      background:transparent;
       box-shadow:0 10px 25px rgba(0,212,255,.20);
     }
     .brand h1{margin:0;font-size:16px;letter-spacing:.2px}
@@ -154,8 +155,9 @@ function renderLandingPage(opts) {
     .mut{color:var(--mut)}
     .foot{
       margin-top:16px;
-      display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+      display:flex;justify-content:center;flex-wrap:wrap;gap:10px;
       color:var(--mut);font-size:12px;
+      text-align:center;align-items:center;
     }
   </style>
 </head>
@@ -163,16 +165,14 @@ function renderLandingPage(opts) {
   <div class="wrap">
     <div class="top">
       <div class="brand">
-        <div class="logo"></div>
+        <div class="logo"><img src="https://files.catbox.moe/ztyeik.png" alt="Logo" /></div>
         <div>
           <h1>${title}</h1>
-          <p>Utilities • Moderation • Minigames</p>
+          <p>@ziolken</p>
         </div>
       </div>
       <div class="actions">
         ${invite ? `<a class="btn primary" href="${escapeHtml(invite)}" target="_blank" rel="noopener">Invite</a>` : ''}
-        <a class="btn" href="/status">Status JSON</a>
-        <a class="btn" href="/incidents">Incidents JSON</a>
         ${external}
       </div>
     </div>
