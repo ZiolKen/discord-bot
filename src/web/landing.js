@@ -26,10 +26,23 @@ function renderLandingPage(opts) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="color-scheme" content="dark light" />
-  <link rel="icon" type="image/png" href="https://files.catbox.moe/ztyeik.png" />
-  <link rel="shortcut icon" href="https://files.catbox.moe/ztyeik.png" />
-  <link rel="apple-touch-icon" size="180x180" href="https://files.catbox.moe/ztyeik.png" />
+  <link rel="icon" type="image/png" href="../../assets/logo.png" />
+  <link rel="shortcut icon" href="../../assets/logo.png" />
+  <link rel="apple-touch-icon" size="180x180" href="../../assets/logo.png" />
+  <meta content="ie=edge" http-equiv="X-UA-Compatible" />
+  <meta name="theme-color" content="#0b0b10" />
+  <link rel="manifest" href="../../assets/manifest.json" />
   <title>${title}</title>
+  <meta name="description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
+  <meta property="og:title" content="ZiolKen Bot" />
+  <meta property="og:description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://discord-bot-us.onrender.com/" />
+  <meta property="og:locale" content="en_US" />
+  <meta property="og:site_name" content="ZiolKen Bot" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ZiolKen Bot" />
+  <meta name="twitter:description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
   <style>
     :root{
       --bg0:#050510;
@@ -165,7 +178,7 @@ function renderLandingPage(opts) {
   <div class="wrap">
     <div class="top">
       <div class="brand">
-        <div class="logo"><img src="https://files.catbox.moe/ztyeik.png" alt="Logo" /></div>
+        <div class="logo"><img src="../../assets/logo.png" alt="Logo" /></div>
         <div>
           <h1>${title}</h1>
           <p>@ziolken</p>
