@@ -1,3 +1,10 @@
+<br>
+<p align="center">
+<a href="https://discord-bot-us.onrender.com" target="_blank">
+<img src="./assets/logo.png" alt="Logo" height="250" width="250" style="border-radius: 16px;" />
+</a>
+</p>
+
 # <p align="center">Discord Bot</p>
 
 <div>
@@ -51,6 +58,7 @@
 ```
 /
 ├─ package.json
+├─ assets/
 ├─ src/
 |    ├─ utils/
 |    ├─ commands/
