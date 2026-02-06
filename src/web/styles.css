@@ -1079,13 +1079,15 @@ body{
 }
 .footer__small{margin-top:6px; color: var(--muted); font-size: 13px}
 .footer__left{
-  margin-left: 24px;
+  margin-left: auto;
+  padding-left: 22px;
 }
 .footer__right{
   display:flex;
   flex-wrap:wrap;
-  margin-right: 12px;
+  margin-right: auto;
   gap: 12px;
+  padding-right: 22px;
   justify-content:flex-end;
 }
 .footer__link{
