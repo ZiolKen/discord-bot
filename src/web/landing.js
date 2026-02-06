@@ -303,7 +303,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
     </header>
 
     <main class="hero" id="home">
-      <section class="card left">
+      <section class="card">
         <h1 class="title">⚡ ZiolKen</h1>
         <div class="subtitle">• Discord Bot</div>
         <p class="desc">
