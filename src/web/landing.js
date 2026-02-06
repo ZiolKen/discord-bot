@@ -15,7 +15,7 @@ function renderLandingPage(opts) {
   const invite = clientId ? inviteUrl(clientId, permissions) : '';
 
   const external = statusUrl
-    ? `<a class="btn ghost" href="${escapeHtml(statusUrl)}" target="_blank" rel="noopener">External Status</a>`
+    ? `<a class="btn ghost" href="${escapeHtml(statusUrl)}" target="_blank" rel="noopener">Status</a>`
     : '';
 
   const year = new Date().getFullYear();
