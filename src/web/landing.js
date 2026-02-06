@@ -73,14 +73,14 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://discord-bot-us.onrender.com/" />
   <meta property="og:locale" content="en_US" />
-  <meta property="og:site_name" content="ZiolKen Bot" />
+  <meta property="og:site_name" content="botstatus.vercel.app" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="ZiolKen Bot" />
   <meta name="twitter:description" content="A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL." />
 
   <title>${safeName}</title>
 
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="/src/web/styles.css" />
 </head>
 
 <body autocomplete="off" spellcheck="false">
