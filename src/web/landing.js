@@ -98,7 +98,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
             <img class="mark" src="../../assets/logo.png" alt="Bot logo" loading="eager" decoding="async" />
             <div class="brandText">
               <div class="brandName" data-bind="name">ZiolKen Bot</div>
-              <div class="brandSub">Discord Bot</div>
+              <div class="brandSub">• Discord Bot</div>
             </div>
           </a>
 
@@ -107,7 +107,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
             <a href="#stack" class="zzz">Stack</a>
             <a href="https://botstatus.vercel.app" target="_blank" rel="noopener noreferrer" class="zzz grad">Live Status</a>
           </nav>
-          <nav class="nav" aria-label="Nav">
+          <nav class="nav" aria-label="Nav btn">
             <a class="btn btnPrimary" data-bind-href="invite" href="${invite}" target="_blank" rel="noopener noreferrer">
               Invite
               <span class="kbd">+</span>
@@ -423,13 +423,15 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
     <footer class="container">
     <div class="topbar">
       <div class="brand">
-        <div class="footer__brand grad" style="font-weight:bold">ZiolKen Bot</div>
-        <div class="footer__small">A versatile, utilities-focused Discord bot.</div>
+        <div class="brandText">
+        <div class="brandName grad" style="font-weight:bold">ZiolKen Bot</div>
+        <div class="brandSub">A versatile, utilities-focused Discord bot.</div>
+        </div>
       </div>
 
-      <div class="nav">
-        <a class="footer__link" href="https://buymeacoffee.com/_zkn" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a>
-        <a class="footer__link" href="https://www.patreon.com/ZiolKen" target="_blank" rel="noopener noreferrer">Patreon</a>
+      <div class="nav" aria-label="Sponsor">
+        <a class="btn btnPrimary" href="https://buymeacoffee.com/_zkn" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a>
+        <a class="btn" href="https://www.patreon.com/ZiolKen" target="_blank" rel="noopener noreferrer">Patreon</a>
       </div>
       </main>
     </div>
