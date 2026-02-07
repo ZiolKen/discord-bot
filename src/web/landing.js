@@ -420,8 +420,8 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
       </div>
     </footer>
 
-    <footer class="footer">
-    <div style="margin-left:auto;margin-right:auto;padding-left:22px;padding-right:22px">
+    <footer class="ft2">
+    <div class="footer">
       <div class="footer__left" style="margin-left:0;padding-left:0">
         <div class="footer__brand grad" style="font-weight:bold">ZiolKen Bot</div>
         <div class="footer__small">A versatile, utilities-focused Discord bot.</div>
