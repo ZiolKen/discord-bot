@@ -137,7 +137,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
               </p>
 
               <div class="heroActions reveal">
-                <a class="btn btnPrimary" data-bind-href="invite" href="#" target="_blank" rel="noopener noreferrer">
+                <a class="btn btnPrimary" data-bind-href="invite" href="${invite}" target="_blank" rel="noopener noreferrer">
                   Invite to Discord
                   <span class="kbd">↗</span>
                 </a>
@@ -407,7 +407,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
         </div>
       </section>
 
-    <footer class="statusbar2" id="status">
+    <footer class="statusbar2" style="max-width:1140px" id="status">
       <div class="statusInner2">
         <div class="pill2">
           <span><span id="miniStatus">Version: 1.3.2</span> <span class="muted2" id="updated"></span></span>
