@@ -422,12 +422,12 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
 
     <footer class="container">
     <div class="topbar">
-      <div class="footer__left">
+      <div class="brand">
         <div class="footer__brand grad" style="font-weight:bold">ZiolKen Bot</div>
         <div class="footer__small">A versatile, utilities-focused Discord bot.</div>
       </div>
 
-      <div class="footer__right">
+      <div class="nav">
         <a class="footer__link" href="https://buymeacoffee.com/_zkn" target="_blank" rel="noopener noreferrer">Buy Me a Coffee</a>
         <a class="footer__link" href="https://www.patreon.com/ZiolKen" target="_blank" rel="noopener noreferrer">Patreon</a>
       </div>
