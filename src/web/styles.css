@@ -1061,16 +1061,19 @@ body{
 .linkish2{color:rgba(255,255,255,.9); text-decoration:none; border-bottom:1px solid rgba(255,255,255,.22)}
 .linkish2:hover{border-bottom-color:rgba(255,255,255,.45)}
 
+.ft2{border-top: 1px solid var(--line)}
 .footer{
-  margin-top: 28px;
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
   gap: 14px;
   color: rgba(255,255,255,.78);
   padding: 18px 0 30px;
-  border-top: 1px solid var(--line);
   margin-top: auto;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 22px;
+  padding-right: 22px;
 }
 .footer__brand{
   font-family: Orbitron, Inter, sans-serif;
