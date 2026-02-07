@@ -420,7 +420,8 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
       </div>
     </footer>
 
-    <footer class="container ft2">
+    <div class="ft2"></div>
+    <footer class="container">
     <div class="topbar">
       <div class="brand">
         <div class="brandText">
