@@ -410,7 +410,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
     <footer class="statusbar2" style="max-width:1140px" id="status">
       <div class="statusInner2">
         <div class="pill2">
-          <span><span id="miniStatus">Version: 1.3.2</span> <span class="muted2" id="updated"></span></span>
+          <span><span id="miniStatus">Version: 1.4.3</span> <span class="muted2" id="updated"></span></span>
         </div>
         <div class="rightMini2">
           <span class="pill2">Node <span class="muted2" id="version">20.20.0</span></span>
