@@ -38,11 +38,18 @@ async function getGuildSettings(guildId) {
   const t = meta.get(guildId) || 0;
   if (hit && Date.now() - t < TTL) return hit;
 
-  const { rows } = await db.query(
-    `INSERT INTO guild_settings (guild_id)
-     VALUES ($1)
-     ON CONFLICT (guild_id) DO UPDATE SET guild_id = EXCLUDED.guild_id
-     RETURNING *`,
+  const { rows } = await db.queryGuild(
+    guildId,
+    `WITH ins AS (
+       INSERT INTO guild_settings (guild_id)
+       VALUES ($1)
+       ON CONFLICT (guild_id) DO NOTHING
+       RETURNING *
+     )
+     SELECT * FROM ins
+     UNION ALL
+     SELECT * FROM guild_settings WHERE guild_id=$1
+     LIMIT 1`,
     [guildId]
   );
 
@@ -60,7 +67,8 @@ async function setGuildSetting(guildId, patch) {
   const sets = keys.map((k, i) => `${k}=$${i + 2}`).join(', ');
   const values = keys.map(k => p[k]);
 
-  const { rows } = await db.query(
+  const { rows } = await db.queryGuild(
+    guildId,
     `UPDATE guild_settings SET ${sets} WHERE guild_id=$1 RETURNING *`,
     [guildId, ...values]
   );

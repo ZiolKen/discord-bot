@@ -1,7 +1,7 @@
 const db = require('../db');
 
 async function createReminder({ userId, channelId, guildId, remindAt, text }) {
-  const { rows } = await db.query(
+  const { rows } = await db.queryGlobal(
     `INSERT INTO reminders (user_id, channel_id, guild_id, remind_at, text)
      VALUES ($1,$2,$3,$4,$5)
      RETURNING id`,
@@ -11,7 +11,7 @@ async function createReminder({ userId, channelId, guildId, remindAt, text }) {
 }
 
 async function listReminders(userId, limit = 10) {
-  const { rows } = await db.query(
+  const { rows } = await db.queryGlobal(
     `SELECT id, channel_id, guild_id, remind_at, text
      FROM reminders
      WHERE user_id=$1
@@ -23,7 +23,7 @@ async function listReminders(userId, limit = 10) {
 }
 
 async function popDueReminders(limit = 20) {
-  const { rows } = await db.query(
+  const { rows } = await db.queryGlobal(
     `DELETE FROM reminders
      WHERE id IN (
        SELECT id FROM reminders

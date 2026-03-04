@@ -13,7 +13,8 @@ async function addXp(guildId, userId, amount) {
   if (Date.now() - last < COOLDOWN_MS) return null;
   cooldown.set(key, Date.now());
 
-  const { rows } = await db.query(
+  const { rows } = await db.queryGuild(
+    guildId,
     `INSERT INTO user_stats (guild_id, user_id, xp, level)
      VALUES ($1,$2,$3,0)
      ON CONFLICT (guild_id,user_id) DO UPDATE SET xp = user_stats.xp + $3
@@ -31,7 +32,8 @@ async function addXp(guildId, userId, amount) {
   }
 
   if (leveledUp) {
-    await db.query(
+    await db.queryGuild(
+      guildId,
       `UPDATE user_stats SET xp=$3, level=$4 WHERE guild_id=$1 AND user_id=$2`,
       [guildId, userId, xp, level]
     );

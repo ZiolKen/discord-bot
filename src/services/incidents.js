@@ -3,16 +3,15 @@ const db = require('../db');
 
 async function createIncident(service, title) {
   const id = crypto.randomUUID();
-  await db.query('BEGIN');
-  try {
-    await db.query(
+  return db.txGlobal(async (client) => {
+    await client.query(
       `INSERT INTO incidents (id, service, title, status, started_at)
        VALUES ($1,$2,$3,'investigating',now())
        ON CONFLICT DO NOTHING`,
       [id, service, title]
     );
 
-    await db.query(
+    await client.query(
       `DELETE FROM incidents
        WHERE id IN (
          SELECT id FROM incidents
@@ -21,17 +20,15 @@ async function createIncident(service, title) {
        )`
     );
 
-    await db.query('COMMIT');
     return id;
-  } catch (e) {
-    await db.query('ROLLBACK');
+  }).catch((e) => {
     if (e?.code === '23505') return null;
     throw e;
-  }
+  });
 }
 
 async function resolveIncident(service) {
-  await db.query(
+  await db.queryGlobal(
     `UPDATE incidents
      SET status='resolved', resolved_at=now()
      WHERE id = (
@@ -45,7 +42,7 @@ async function resolveIncident(service) {
 }
 
 async function listIncidents(limit = 30) {
-  const { rows } = await db.query(
+  const { rows } = await db.queryGlobal(
     `SELECT id, service, title, status, started_at, resolved_at
      FROM incidents
      ORDER BY started_at DESC
