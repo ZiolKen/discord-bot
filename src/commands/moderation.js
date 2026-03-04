@@ -17,6 +17,7 @@ async function sendModLog(guild, embed) {
 module.exports = [
   {
     name: 'setlog',
+    aliases: ['slog'],
     category: 'moderation',
     description: 'Set moderation log channel',
     slash: {
@@ -321,7 +322,8 @@ module.exports = [
       async run(interaction) {
         const user = interaction.options.getUser('user');
         const reason = interaction.options.getString('reason') || null;
-        await db.query(
+        await db.queryGuild(
+          interaction.guildId,
           `INSERT INTO warns (guild_id, user_id, mod_id, reason) VALUES ($1,$2,$3,$4)`,
           [interaction.guildId, user.id, interaction.user.id, reason]
         );
@@ -334,7 +336,8 @@ module.exports = [
         const user = message.mentions.users.first();
         if (!user) return message.reply('Usage: `!warn @user [reason]`');
         const reason = args.slice(1).join(' ') || null;
-        await db.query(
+        await db.queryGuild(
+          message.guild.id,
           `INSERT INTO warns (guild_id, user_id, mod_id, reason) VALUES ($1,$2,$3,$4)`,
           [message.guild.id, user.id, message.author.id, reason]
         );
@@ -356,7 +359,8 @@ module.exports = [
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
       async run(interaction) {
         const user = interaction.options.getUser('user');
-        const { rows } = await db.query(
+        const { rows } = await db.queryGuild(
+          interaction.guildId,
           `SELECT id, reason, created_at FROM warns WHERE guild_id=$1 AND user_id=$2 ORDER BY id DESC LIMIT 10`,
           [interaction.guildId, user.id]
         );
@@ -370,7 +374,8 @@ module.exports = [
         if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers)) return message.reply('🚫 You need **Moderate Members**.');
         const user = message.mentions.users.first();
         if (!user) return message.reply('Usage: `!warnings @user`');
-        const { rows } = await db.query(
+        const { rows } = await db.queryGuild(
+          message.guild.id,
           `SELECT id, reason, created_at FROM warns WHERE guild_id=$1 AND user_id=$2 ORDER BY id DESC LIMIT 10`,
           [message.guild.id, user.id]
         );
@@ -393,7 +398,7 @@ module.exports = [
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
       async run(interaction) {
         const user = interaction.options.getUser('user');
-        await db.query(`DELETE FROM warns WHERE guild_id=$1 AND user_id=$2`, [interaction.guildId, user.id]);
+        await db.queryGuild(interaction.guildId, `DELETE FROM warns WHERE guild_id=$1 AND user_id=$2`, [interaction.guildId, user.id]);
         return interaction.reply(`✅ Cleared warnings for <@${user.id}>.`);
       }
     },
@@ -402,7 +407,7 @@ module.exports = [
         if (!message.member.permissions.has(PermissionFlagsBits.ModerateMembers)) return message.reply('🚫 You need **Moderate Members**.');
         const user = message.mentions.users.first();
         if (!user) return message.reply('Usage: `!clearwarns @user`');
-        await db.query(`DELETE FROM warns WHERE guild_id=$1 AND user_id=$2`, [message.guild.id, user.id]);
+        await db.queryGuild(message.guild.id, `DELETE FROM warns WHERE guild_id=$1 AND user_id=$2`, [message.guild.id, user.id]);
         return message.reply(`✅ Cleared warnings for <@${user.id}>.`);
       }
     }

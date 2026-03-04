@@ -3,13 +3,19 @@ const moderation = require('./moderation');
 const security = require('./security');
 const minigames = require('./minigames');
 const casino = require('./casino');
+const economy = require('./economy');
+const fun = require('./fun');
+const devutils = require('./devutils');
 
 const all = [
   ...utilities,
   ...moderation,
   ...security,
   ...minigames,
-  ...casino
+  ...casino,
+  ...economy,
+  ...fun,
+  ...devutils
 ];
 
 function buildSlashJSON() {

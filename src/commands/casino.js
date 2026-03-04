@@ -305,7 +305,7 @@ module.exports = [
     name: 'gamble',
     aliases: ['gb'],
     category: 'casino',
-    description: '50/50 coin gamble (house fee 5%)',
+    description: '50/50 coin gamble',
     slash: {
       data: new SlashCommandBuilder()
         .setName('gamble')
@@ -363,7 +363,7 @@ module.exports = [
     name: 'slots',
     aliases: ['sl'],
     category: 'casino',
-    description: 'Slot machine (house fee 5%)',
+    description: 'Slot machine',
     slash: {
       data: new SlashCommandBuilder()
         .setName('slots')
@@ -539,7 +539,7 @@ module.exports = [
     name: 'wheel',
     aliases: ['spin','sp','wh'],
     category: 'casino',
-    description: 'Spin the wheel (weighted RNG)',
+    description: 'Spin the wheel',
     slash: {
       data: new SlashCommandBuilder()
         .setName('wheel')
@@ -609,7 +609,7 @@ module.exports = [
     name: 'plinko',
     aliases: ['pl'],
     category: 'casino',
-    description: 'Plinko (RNG path)',
+    description: 'Plinko',
     slash: {
       data: new SlashCommandBuilder()
         .setName('plinko')

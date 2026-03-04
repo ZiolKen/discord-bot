@@ -1,9 +1,10 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-const { getOrCreate, addCoins, setClaim, cooldownReady } = require('../services/economy');
+const { getOrCreate, claimDaily, claimWeekly, DAILY_COOLDOWN_MS, WEEKLY_COOLDOWN_MS } = require('../services/economy');
 const { createSession, endSession } = require('../services/gameSessions');
 const db = require('../db');
 const { toDiscordTs } = require('../utils/time');
 const { randInt } = require('../services/casino');
+const gathering = require('../services/gathering');
 
 const TTT_LINES = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -91,11 +92,6 @@ function tttEmbed(board, statusText) {
 
 async function ensureRow(guildId, userId) {
   return getOrCreate(guildId, userId);
-}
-
-async function canClaim(field, row, ms) {
-  const last = row[field];
-  return cooldownReady(last, ms);
 }
 
 module.exports = [
@@ -198,31 +194,19 @@ module.exports = [
     slash: {
       data: new SlashCommandBuilder().setName('daily').setDescription('Claim daily coins'),
       async run(interaction) {
-        const row = await ensureRow(interaction.guildId, interaction.user.id);
-        const ok = await canClaim('daily_at', row, 24*3600*1000);
-        if (!ok) {
-          const next = new Date(new Date(row.daily_at).getTime() + 24*3600*1000);
-          return interaction.reply({ content: `⏳ Already claimed. Try again ${toDiscordTs(next,'R')}.`, ephemeral: true });
-        }
-        const gain = 40;
-        await addCoins(interaction.guildId, interaction.user.id, gain);
-        await setClaim(interaction.guildId, interaction.user.id, 'daily_at');
-        const updated = await ensureRow(interaction.guildId, interaction.user.id);
-        return interaction.reply(`🎁 Daily claimed: +**${gain}** coins. Total: **${updated.coins}**`);
+        const out = await claimDaily(interaction.guildId, interaction.user.id);
+        if (!out.ok) return interaction.reply({ content: `⏳ Already claimed. Try again ${toDiscordTs(out.nextAt, 'R')}.`, ephemeral: true });
+        const streak = Number(out.streak) || 0;
+        const bonus = streak > 1 ? ` (streak **${streak}**)` : '';
+        return interaction.reply(`🎁 Daily claimed: +**${out.gain}** coins${bonus}. Total: **${out.coins}**\nNext: ${toDiscordTs(out.nextAt || new Date(Date.now() + DAILY_COOLDOWN_MS), 'R')}`);
       }
     },
     prefix: { async run(message) {
-      const row = await ensureRow(message.guild.id, message.author.id);
-      const ok = await canClaim('daily_at', row, 24*3600*1000);
-      if (!ok) {
-        const next = new Date(new Date(row.daily_at).getTime() + 24*3600*1000);
-        return message.reply(`⏳ Already claimed. Try again ${toDiscordTs(next,'R')}.`);
-      }
-      const gain = 40;
-      await addCoins(message.guild.id, message.author.id, gain);
-      await setClaim(message.guild.id, message.author.id, 'daily_at');
-      const updated = await ensureRow(message.guild.id, message.author.id);
-      return message.reply(`🎁 Daily claimed: +**${gain}** coins. Total: **${updated.coins}**`);
+      const out = await claimDaily(message.guild.id, message.author.id);
+      if (!out.ok) return message.reply(`⏳ Already claimed. Try again ${toDiscordTs(out.nextAt, 'R')}.`);
+      const streak = Number(out.streak) || 0;
+      const bonus = streak > 1 ? ` (streak **${streak}**)` : '';
+      return message.reply(`🎁 Daily claimed: +**${out.gain}** coins${bonus}. Total: **${out.coins}**\nNext: ${toDiscordTs(out.nextAt || new Date(Date.now() + DAILY_COOLDOWN_MS), 'R')}`);
     } }
   },
 
@@ -234,31 +218,19 @@ module.exports = [
     slash: {
       data: new SlashCommandBuilder().setName('weekly').setDescription('Claim weekly coins'),
       async run(interaction) {
-        const row = await ensureRow(interaction.guildId, interaction.user.id);
-        const ok = await canClaim('weekly_at', row, 7*24*3600*1000);
-        if (!ok) {
-          const next = new Date(new Date(row.weekly_at).getTime() + 7*24*3600*1000);
-          return interaction.reply({ content: `⏳ Already claimed. Try again ${toDiscordTs(next,'R')}.`, ephemeral: true });
-        }
-        const gain = 200;
-        await addCoins(interaction.guildId, interaction.user.id, gain);
-        await setClaim(interaction.guildId, interaction.user.id, 'weekly_at');
-        const updated = await ensureRow(interaction.guildId, interaction.user.id);
-        return interaction.reply(`🎁 Weekly claimed: +**${gain}** coins. Total: **${updated.coins}**`);
+        const out = await claimWeekly(interaction.guildId, interaction.user.id);
+        if (!out.ok) return interaction.reply({ content: `⏳ Already claimed. Try again ${toDiscordTs(out.nextAt, 'R')}.`, ephemeral: true });
+        const streak = Number(out.streak) || 0;
+        const bonus = streak > 1 ? ` (streak **${streak}**)` : '';
+        return interaction.reply(`🎁 Weekly claimed: +**${out.gain}** coins${bonus}. Total: **${out.coins}**\nNext: ${toDiscordTs(out.nextAt || new Date(Date.now() + WEEKLY_COOLDOWN_MS), 'R')}`);
       }
     },
     prefix: { async run(message) {
-      const row = await ensureRow(message.guild.id, message.author.id);
-      const ok = await canClaim('weekly_at', row, 7*24*3600*1000);
-      if (!ok) {
-        const next = new Date(new Date(row.weekly_at).getTime() + 7*24*3600*1000);
-        return message.reply(`⏳ Already claimed. Try again ${toDiscordTs(next,'R')}.`);
-      }
-      const gain = 200;
-      await addCoins(message.guild.id, message.author.id, gain);
-      await setClaim(message.guild.id, message.author.id, 'weekly_at');
-      const updated = await ensureRow(message.guild.id, message.author.id);
-      return message.reply(`🎁 Weekly claimed: +**${gain}** coins. Total: **${updated.coins}**`);
+      const out = await claimWeekly(message.guild.id, message.author.id);
+      if (!out.ok) return message.reply(`⏳ Already claimed. Try again ${toDiscordTs(out.nextAt, 'R')}.`);
+      const streak = Number(out.streak) || 0;
+      const bonus = streak > 1 ? ` (streak **${streak}**)` : '';
+      return message.reply(`🎁 Weekly claimed: +**${out.gain}** coins${bonus}. Total: **${out.coins}**\nNext: ${toDiscordTs(out.nextAt || new Date(Date.now() + WEEKLY_COOLDOWN_MS), 'R')}`);
     } }
   },
 
@@ -270,7 +242,8 @@ module.exports = [
     slash: {
       data: new SlashCommandBuilder().setName('leaderboard').setDescription('Show coin leaderboard'),
       async run(interaction) {
-        const { rows } = await db.query(
+        const { rows } = await db.queryGuild(
+          interaction.guildId,
           `SELECT user_id, coins FROM user_stats WHERE guild_id=$1 ORDER BY coins DESC NULLS LAST LIMIT 10`,
           [interaction.guildId]
         );
@@ -280,7 +253,8 @@ module.exports = [
       }
     },
     prefix: { async run(message) {
-      const { rows } = await db.query(
+      const { rows } = await db.queryGuild(
+        message.guild.id,
         `SELECT user_id, coins FROM user_stats WHERE guild_id=$1 ORDER BY coins DESC NULLS LAST LIMIT 10`,
         [message.guild.id]
       );
@@ -290,7 +264,7 @@ module.exports = [
     } }
   },
 
-  {
+    {
     name: 'fish',
     aliases: ['fishing'],
     category: 'minigames',
@@ -298,51 +272,67 @@ module.exports = [
     slash: {
       data: new SlashCommandBuilder().setName('fish').setDescription('Go fishing (cooldown ~10m)'),
       async run(interaction) {
-        const row = await ensureRow(interaction.guildId, interaction.user.id);
-        const ok = await canClaim('fish_at', row, 10*60*1000);
-        if (!ok) {
-          const next = new Date(new Date(row.fish_at).getTime() + 10*60*1000);
-          return interaction.reply({ content: `🎣 You are tired. Try again ${toDiscordTs(next,'R')}.`, ephemeral: true });
+        const out = await gathering.fish(interaction.guildId, interaction.user.id);
+        if (!out.ok) {
+          const extra = out.boostsLeft ? ` Boost charges: **${out.boostsLeft}**.` : '';
+          return interaction.reply({ content: `🎣 You are tired. Try again ${toDiscordTs(out.nextAt, 'R')}.${extra}`, ephemeral: true });
         }
 
-        const outcomes = [
-          { msg: 'You caught a small fish 🐟', coins: 5 },
-          { msg: 'You caught a big fish 🐠', coins: 15 },
-          { msg: 'You caught trash 🥫', coins: 0 },
-          { msg: 'You found a pearl 🦪', coins: 30 },
-          { msg: 'Nothing bit... 🌊', coins: 0 }
-        ];
-        const pick = outcomes[randInt(0, outcomes.length - 1)];
-        if (pick.coins > 0) await addCoins(interaction.guildId, interaction.user.id, pick.coins);
-        await setClaim(interaction.guildId, interaction.user.id, 'fish_at');
-        const updated = await ensureRow(interaction.guildId, interaction.user.id);
-        return interaction.reply(`🎣 ${pick.msg} ${pick.coins ? `(+${pick.coins} coins)` : ''}\nTotal: **${updated.coins}**`);
+        const boostText = out.boostUsed ? ` (boost used, ${out.boostsLeft} left)` : out.boostsLeft ? ` (boosts left: ${out.boostsLeft})` : '';
+        if (out.nothing) return interaction.reply(`🎣 Nothing bit... 🌊${boostText}`);
+
+        return interaction.reply(`🎣 You caught ${out.item.emoji ? `${out.item.emoji} ` : ''}**${out.item.name}** × **${out.qty}**${boostText}\nUse \`/sell ${out.item.id} ${out.qty}\` or \`/market list\` to trade with others.`);
       }
     },
     prefix: { async run(message) {
-      const row = await ensureRow(message.guild.id, message.author.id);
-      const ok = await canClaim('fish_at', row, 10*60*1000);
-      if (!ok) {
-        const next = new Date(new Date(row.fish_at).getTime() + 10*60*1000);
-        return message.reply(`🎣 You are tired. Try again ${toDiscordTs(next,'R')}.`);
+      const out = await gathering.fish(message.guild.id, message.author.id);
+      if (!out.ok) {
+        const extra = out.boostsLeft ? ` Boost charges: ${out.boostsLeft}.` : '';
+        return message.reply(`🎣 You are tired. Try again ${toDiscordTs(out.nextAt, 'R')}.${extra}`);
       }
 
-      const outcomes = [
-        { msg: 'You caught a small fish 🐟', coins: 5 },
-        { msg: 'You caught a big fish 🐠', coins: 15 },
-        { msg: 'You caught trash 🥫', coins: 0 },
-        { msg: 'You found a pearl 🦪', coins: 30 },
-        { msg: 'Nothing bit... 🌊', coins: 0 }
-      ];
-      const pick = outcomes[randInt(0, outcomes.length - 1)];
-      if (pick.coins > 0) await addCoins(message.guild.id, message.author.id, pick.coins);
-      await setClaim(message.guild.id, message.author.id, 'fish_at');
-      const updated = await ensureRow(message.guild.id, message.author.id);
-      return message.reply(`🎣 ${pick.msg} ${pick.coins ? `(+${pick.coins} coins)` : ''}\nTotal: **${updated.coins}**`);
+      const boostText = out.boostUsed ? ` (boost used, ${out.boostsLeft} left)` : out.boostsLeft ? ` (boosts left: ${out.boostsLeft})` : '';
+      if (out.nothing) return message.reply(`🎣 Nothing bit... 🌊${boostText}`);
+
+      return message.reply(`🎣 You caught ${out.item.emoji ? `${out.item.emoji} ` : ''}**${out.item.name}** × **${out.qty}**${boostText}\nUse \`!sell ${out.item.id} ${out.qty}\` or \`!market list\` to trade.`);
     } }
   },
 
   {
+    name: 'hunt',
+    aliases: ['hunting'],
+    category: 'minigames',
+    description: 'Go hunting (cooldown)',
+    slash: {
+      data: new SlashCommandBuilder().setName('hunt').setDescription('Go hunting (cooldown ~30m)'),
+      async run(interaction) {
+        const out = await gathering.hunt(interaction.guildId, interaction.user.id);
+        if (!out.ok) {
+          const extra = out.boostsLeft ? ` Boost charges: **${out.boostsLeft}**.` : '';
+          return interaction.reply({ content: `🏹 You need to rest. Try again ${toDiscordTs(out.nextAt, 'R')}.${extra}`, ephemeral: true });
+        }
+
+        const boostText = out.boostUsed ? ` (boost used, ${out.boostsLeft} left)` : out.boostsLeft ? ` (boosts left: ${out.boostsLeft})` : '';
+        if (out.nothing) return interaction.reply(`🏹 You found nothing... 🍃${boostText}`);
+
+        return interaction.reply(`🏹 You got ${out.item.emoji ? `${out.item.emoji} ` : ''}**${out.item.name}** × **${out.qty}**${boostText}\nUse \`/sell ${out.item.id} ${out.qty}\` or \`/market list\` to trade with others.`);
+      }
+    },
+    prefix: { async run(message) {
+      const out = await gathering.hunt(message.guild.id, message.author.id);
+      if (!out.ok) {
+        const extra = out.boostsLeft ? ` Boost charges: ${out.boostsLeft}.` : '';
+        return message.reply(`🏹 You need to rest. Try again ${toDiscordTs(out.nextAt, 'R')}.${extra}`);
+      }
+
+      const boostText = out.boostUsed ? ` (boost used, ${out.boostsLeft} left)` : out.boostsLeft ? ` (boosts left: ${out.boostsLeft})` : '';
+      if (out.nothing) return message.reply(`🏹 You found nothing... 🍃${boostText}`);
+
+      return message.reply(`🏹 You got ${out.item.emoji ? `${out.item.emoji} ` : ''}**${out.item.name}** × **${out.qty}**${boostText}\nUse \`!sell ${out.item.id} ${out.qty}\` or \`!market list\` to trade.`);
+    } }
+  },
+
+{
     name: 'guess',
     category: 'minigames',
     description: 'Guess the number (session)',
@@ -361,9 +351,7 @@ module.exports = [
           const g = parseInt(m.content.trim(), 10);
           if (g === target) {
             collector.stop('win');
-            const reward = 30 + (7 - tries) * 5;
-            await addCoins(interaction.guildId, interaction.user.id, reward);
-            await m.reply(`✅ Correct! The number was **${target}**. You earned **${reward}** coins.`);
+            await m.reply(`✅ Correct! The number was **${target}**. Tries: **${tries}**/7.`);
           } else {
             await m.reply(g < target ? '⬆️ Higher' : '⬇️ Lower');
           }
@@ -389,9 +377,7 @@ module.exports = [
         const g = parseInt(m.content.trim(), 10);
         if (g === target) {
           collector.stop('win');
-          const reward = 30 + (7 - tries) * 5;
-          await addCoins(message.guild.id, message.author.id, reward);
-          await m.reply(`✅ Correct! The number was **${target}**. You earned **${reward}** coins.`);
+          await m.reply(`✅ Correct! The number was **${target}**. Tries: **${tries}**/7.`);
         } else {
           await m.reply(g < target ? '⬆️ Higher' : '⬇️ Lower');
         }
@@ -411,7 +397,7 @@ module.exports = [
     category: 'minigames',
     description: 'Tic-Tac-Toe vs bot',
     slash: {
-      data: new SlashCommandBuilder().setName('tictactoe').setDescription('Play Tic-Tac-Toe vs bot (buttons)'),
+      data: new SlashCommandBuilder().setName('tictactoe').setDescription('Play Tic-Tac-Toe vs bot'),
       async run(interaction) {
         const board = Array(9).fill(null);
 
@@ -424,9 +410,8 @@ module.exports = [
           async onAction(btn, action, s) {
             const st = s.state;
 
-            const end = async (statusText, coins) => {
+            const end = async (statusText) => {
               st.done = true;
-              if (coins > 0) await addCoins(btn.guildId, s.ownerId, coins);
               const embed = tttEmbed(st.board, statusText);
               endSession(s.id);
               return btn.update({ embeds: [embed], components: disableRows(btn.message.components) }).catch(() => {});
@@ -440,15 +425,15 @@ module.exports = [
 
             st.board[idx] = 'X';
             const w1 = tttWinner(st.board);
-            if (w1 === 'X') return end('✅ You win! (+20 coins)', 20);
-            if (tttFull(st.board)) return end('🤝 Draw (+8 coins)', 8);
+            if (w1 === 'X') return end('✅ You win!');
+            if (tttFull(st.board)) return end('🤝 Draw');
 
             const botMove = tttBestMove(st.board);
             if (botMove >= 0) st.board[botMove] = 'O';
 
             const w2 = tttWinner(st.board);
-            if (w2 === 'O') return end('❌ You lose', 0);
-            if (tttFull(st.board)) return end('🤝 Draw (+8 coins)', 8);
+            if (w2 === 'O') return end('❌ You lose');
+            if (tttFull(st.board)) return end('🤝 Draw');
 
             const embed = tttEmbed(st.board, 'Your turn');
             return btn.update({ embeds: [embed], components: tttComponents(s.id, st.board, false) }).catch(() => {});
@@ -472,9 +457,8 @@ module.exports = [
           async onAction(btn, action, s) {
             const st = s.state;
 
-            const end = async (statusText, coins) => {
+            const end = async (statusText) => {
               st.done = true;
-              if (coins > 0) await addCoins(btn.guildId, s.ownerId, coins);
               const embed = tttEmbed(st.board, statusText);
               endSession(s.id);
               return btn.update({ embeds: [embed], components: disableRows(btn.message.components) }).catch(() => {});
@@ -488,15 +472,15 @@ module.exports = [
 
             st.board[idx] = 'X';
             const w1 = tttWinner(st.board);
-            if (w1 === 'X') return end('✅ You win! (+20 coins)', 20);
-            if (tttFull(st.board)) return end('🤝 Draw (+8 coins)', 8);
+            if (w1 === 'X') return end('✅ You win!');
+            if (tttFull(st.board)) return end('🤝 Draw');
 
             const botMove = tttBestMove(st.board);
             if (botMove >= 0) st.board[botMove] = 'O';
 
             const w2 = tttWinner(st.board);
-            if (w2 === 'O') return end('❌ You lose', 0);
-            if (tttFull(st.board)) return end('🤝 Draw (+8 coins)', 8);
+            if (w2 === 'O') return end('❌ You lose');
+            if (tttFull(st.board)) return end('🤝 Draw');
 
             const embed = tttEmbed(st.board, 'Your turn');
             return btn.update({ embeds: [embed], components: tttComponents(s.id, st.board, false) }).catch(() => {});
