@@ -6,6 +6,7 @@
 </p>
 
 # <p align="center">Discord Bot</p>
+<p align="center">(Utilities • Moderation • Security • Economy • Casino • Minigames)</p>
 
 <div>
   <img style="100%" src="https://capsule-render.vercel.app/api?type=waving&height=100&section=header&reversal=false&fontSize=70&fontColor=FFFFFF&fontAlign=50&fontAlignY=50&stroke=-&descSize=20&descAlign=50&descAlignY=50&theme=cobalt"  />
@@ -17,43 +18,47 @@
   <a href="https://github.com/ZiolKen/discord-bot/forks"><img src="https://img.shields.io/github/forks/ZiolKen/discord-bot?style=flat"></a>
 </p>
 
-### <p align="center">A versatile, utilities-focused Discord bot built with Node.js, discord.js, and PostgreSQL. It features a comprehensive suite of tools for server management, user engagement, and entertainment, supporting both slash (`/`) and legacy prefix commands (default `!`). The bot also includes an Express-powered web server for a real-time status page and landing page.</p>
+### <p align="center">A production-ready Discord bot with a modular command system, modern Postgres persistence, and a scalable multi-PostgreSQL shard router.</p>
 
 ---
 
-## Features
+## Highlights
 
-*   **🛡️ Moderation & Security**
-    *   Full suite of moderation commands: `ban`, `unban`, `kick`, `timeout`, `untimeout`, `purge`, `lock`, `unlock`, and `slowmode`.
-    *   A robust warning system with `warn`, `warnings`, and `clearwarns` commands.
-    *   Configurable moderation log channel (`setlog`).
-    *   Advanced Auto-Moderation (off by default) with configurable modules:
-        *   `antilink`, `antispam`, `antimention`, `caps`, `badwords`, and `raid` protection.
-        *   Configurable actions, such as 'delete' or 'timeout'.
+### Utilities
+- AFK, snipe, poll, reminders, server/user info, avatar, timestamp, and more
 
-*   **🎲 Minigames & Economy**
-    *   Server-based economy system with `balance`, `daily`, and `weekly` coin claims.
-    *   Track top users with a server `leaderboard`.
-    *   A variety of engaging games: `blackjack`, `slots`, `tictactoe`, `coinflip`, `rps`, `roll`, `guess`, and `fishing`.
-    *   Gamble your coins with the `gamble` and `slots` commands.
+### Moderation & Security
+- Warn system, timeout, kick/ban, purge
+- Anti-link / anti-spam / anti-mention / caps checks
+- Logging + audit-style incident tracking
 
-*   **⚙️ Utilities**
-    *   Comprehensive information commands: `serverinfo`, `userinfo`, `channelinfo`, and `roleinfo`.
-    *   User-centric tools: `avatar`, `banner`, `snipe` (shows the last deleted message), and `afk`.
-    *   Server utilities: `poll`, `reminders`, `timestamp` generator, and `say`.
-    *   Customizable server prefix using the `prefix` command.
+### Economy
+- **Coins only come from:** casino bets, daily, weekly, and **selling items**
+- Shop + inventory
+- Bot buyback (fixed prices)
+- Player market (custom prices with bounds)
+- Daily/weekly **streaks** with capped bonuses (grace window to keep streak)
+- Boost items (bait/trap/lucky charm) to increase loot odds (still no direct coin drops)
+- Item-only trading between players (**no coins**) with **max 30% value gap** for balance
+- Crates (items-only loot, no direct coin drops)
 
-*   **⭐ Leveling System**
-    *   Users gain XP and level up by being active in chat.
-    *   This feature is opt-in and can be enabled or disabled per-server with the `level` command.
+### Casino
+- Real RNG using cryptographic randomness
+- Multiple games (slots, roulette, wheel, blackjack, etc.)
 
-*   **🌐 Web & Status**
-    *   An Express-powered API provides a real-time status page.
-    *   The API includes endpoints for health checks, detailed bot status (`/status`), and recent service incidents (`/incidents`).
+### Minigames (no direct coin rewards)
+- Fishing & hunting (loot items you can sell/trade)
+- Guess, tic-tac-toe, and more fun commands (/8ball, /choose, /art, /hangman)
 
 ---
 
-## 📁 Project Structure
+## Requirements
+- Node.js 20+
+- PostgreSQL (1 or many)
+
+---
+
+## Project Structure
 
 ```
 /
@@ -64,6 +69,7 @@
 |    ├─ commands/
 |    ├─ services/
 |    ├─ web/
+|    ├─ data/
 |    ├─ schema.sql
 |    ├─ index.js
 |    ├─ db.js
@@ -75,37 +81,90 @@
 
 ## Setup
 
-Follow these steps to set up and run your own instance of the bot.
+1) Install dependencies
+```bash
+npm install
+```
 
-1.  **Clone the Repository**
-    ```bash
-    git clone https://github.com/ziolken/discord-bot.git
-    cd discord-bot
-    ```
+2) Configure environment variables
 
-2.  **Install Dependencies**
-    ```bash
-    npm install
-    ```
+### Bot
+- `TOKEN` — Discord bot token
+- `CLIENT_ID` — Application client id
 
-3.  **Set Up the Database**
-    This project requires a PostgreSQL database. Once you have a database instance, run the migration script to create the necessary tables from `src/schema.sql`.
-    ```bash
-    npm run migrate
-    ```
+### Database (single shard)
+You can keep the old single-DB style:
+- `DATABASE_URL`
+- `PG_CA_PATH` or `PG_CA`
 
-4.  **Configure Environment Variables**
-    Create a `.env` file in the root directory and add the following variables:
-    *   `TOKEN`: Your Discord bot's token.
-    *   `CLIENT_ID`: Your Discord application's client ID.
-    *   `DATABASE_URL`: Your PostgreSQL connection string (e.g., `postgres://user:password@host:port/database`).
-    *   `PG_CA_PATH` (Recommended): File path to your database's CA certificate for a secure SSL connection.
-    *   or `/etc/secrets/ca.pem`: for CA certificate.
+### Database (multiple PostgreSQL shards)
+To enable multiple shards, use:
+- `DATABASE_URL-1`, `DATABASE_URL-2`, ...
+- `PG_CA_PATH-1` / `PG_CA-1`, `PG_CA_PATH-2` / `PG_CA-2`, ...
 
-5.  **Start the Bot**
-    ```bash
-    npm start
-    ```
+The index **must match** (URL + CA):
+- `DATABASE_URL-1` → `PG_CA_PATH-1` or `PG_CA-1`
+
+If your hosting provider doesn't allow `-` in env names, you can also use underscore variants:
+- `DATABASE_URL_1`, `PG_CA_PATH_1`, `PG_CA_1`, etc.
+
+### SSL options
+- `PG_SSL_MODE` (default: `verify-ca`)
+  - `verify-ca` (recommended)
+  - `require` (no CA verification)
+  - `disable` (no SSL)
+  - `auto` (disable SSL for localhost, otherwise verify-ca)
+- `PG_SSL_DISABLE=1` (forces SSL off)
+- `PG_POOL_MAX` (default: 5)
+
+3) Run migrations (applies schema to **all** configured shards)
+```bash
+npm run migrate
+```
+
+4) Start the bot
+```bash
+npm start
+```
+
+---
+
+## Economy commands
+- `/shop` — browse items
+- `/buy <item> [qty]` — buy from bot shop
+- `/sell <item> [qty]` — sell to bot (fixed price)
+- `/inventory [user]` — view inventory
+- `/use <item> [arg]` — use items
+  - crates: `/use wooden_crate`
+  - boosts: `/use bait`, `/use trap`, `/use lucky_charm`
+  - profile cosmetics: `/use rename_ticket <title>`, `/use color_spray #ff00ff`
+- `/profile [user]` — coins, streaks, boosts, next claim timers
+- `/market list|browse|buy|cancel` — player marketplace (custom prices with bounds)
+  - market purchases apply a small fee (burned) to reduce inflation
+- `/trade request|accept|add|remove|confirm|cancel` — item-only trade (max 30% value gap)
+
+---
+
+## Shard routing design
+- The bot connects to **multiple PostgreSQL databases** (shards).
+- Guild-scoped data is routed by `guild_id`.
+- A guild is anchored by a row in `guild_settings`; once a guild exists on a shard, it stays on that shard.
+- New guilds are allocated deterministically, with failover to the next writable shard if a shard becomes write-disabled.
+
+---
+
+## Notes
+- This repo is built for long-term stability: transaction-safe economy operations, bounded pricing, and escrow-based listings/trades.
+- Minigames do not directly mint coins. Items are the bridge to coins via `/sell` and the player market.
+
+---
+
+## Economy tuning (optional env)
+- `DAILY_BASE`, `WEEKLY_BASE`
+- `DAILY_COOLDOWN_HOURS`, `DAILY_STREAK_GRACE_HOURS`
+- `WEEKLY_COOLDOWN_DAYS`, `WEEKLY_STREAK_GRACE_DAYS`
+- `FISH_COOLDOWN_MIN`, `HUNT_COOLDOWN_MIN`
+- `MARKET_FEE_PCT`, `MARKET_FEE_MIN_TOTAL`, `MARKET_FEE_MIN`
 
 ---
 
