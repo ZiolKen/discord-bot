@@ -204,7 +204,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
                 <div class="panelGrid" aria-label="Live highlights">
                   <div class="tiny">
                     <div class="tinyK">Bot version</div>
-                    <div class="tinyV" id="statVersion">1.3.2</div>
+                    <div class="tinyV" id="statVersion">1.4.3</div>
                   </div>
                   <div class="tiny">
                     <div class="tinyK">Node</div>
