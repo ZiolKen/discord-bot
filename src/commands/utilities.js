@@ -783,5 +783,161 @@ module.exports = [
         return message.reply({ content: `**Servers (${guilds.length})**`, files: [file] });
       }
     }
+  },
+  
+  {
+    name: 'support',
+    aliases: ['supporter','donate','donor','patreon','patron','buymeacoffee','bmac','bmc'],
+    category: 'utilities',
+    description: 'Sponsor this bot',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('support')
+        .setDescription('Sponsor this bot'),
+      async run(interaction) {
+        const embed = new EmbedBuilder()
+          .setTitle('Support')
+          .setDescription('Sponsor this project.')
+          .setColor(0xFF00FF)
+          .addFields(
+            {
+              name: 'Donate to ZiolKen Bot.',
+              value: 'Join by clicking one of the following choices below!',
+              inline: false
+            }
+          )
+          .setFooter({ text: `Requested by ${interaction.user.tag}` })
+          .setTimestamp();
+  
+        const row1 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel('Patreon')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://patreon.com/ZiolKen'),
+  
+          new ButtonBuilder()
+            .setLabel('Buy Me a Coffee')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://buymeacoffee.com/_zkn'),
+        );
+  
+        return interaction.reply({
+          embeds: [embed],
+          components: [row1]
+        });
+      }
+    },
+    prefix: {
+      async run(message) {
+        const embed = new EmbedBuilder()
+          .setTitle('Support')
+          .setDescription('Sponsor this project.')
+          .setColor(0xFF00FF)
+          .addFields(
+            {
+              name: 'Donate to ZiolKen Bot.',
+              value: 'Join by clicking one of the following choices below!',
+              inline: false
+            }
+          )
+          .setFooter({ text: `Requested by ${interaction.user.tag}` })
+          .setTimestamp();
+  
+        const row1 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel('Patreon')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://patreon.com/ZiolKen'),
+  
+          new ButtonBuilder()
+            .setLabel('Buy Me a Coffee')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://buymeacoffee.com/_zkn'),
+        );
+  
+        return message.reply({
+          embeds: [embed],
+          components: [row1]
+        });
+      }
+    }
+  },
+  
+  {
+    name: 'credit',
+    aliases: ['owner','founder','developer','coder','programmer','creator'],
+    category: 'utilities',
+    description: 'ZiolKen Bot credit',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('credit')
+        .setDescription('ZiolKen Bot credit'),
+      async run(interaction) {
+        const embed = new EmbedBuilder()
+          .setTitle('ZiolKen Bot credit')
+          .setDescription('By @ziolken.')
+          .setColor(0xFF00FF)
+          .addFields(
+            {
+              name: 'Support by using',
+              value: '`/support` or `!support` depends prefix.',
+              inline: false
+            }
+          )
+          .setFooter({ text: `Requested by ${interaction.user.tag}` })
+          .setTimestamp();
+  
+        const row1 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel('Portfolio')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://ziolken.pages.dev'),
+  
+          new ButtonBuilder()
+            .setLabel('VN Translator')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://vntranslator.pages.dev'),
+        );
+  
+        return interaction.reply({
+          embeds: [embed],
+          components: [row1]
+        });
+      }
+    },
+    prefix: {
+      async run(message) {
+        const embed = new EmbedBuilder()
+          .setTitle('ZiolKen Bot credit')
+          .setDescription('By @ziolken.')
+          .setColor(0xFF00FF)
+          .addFields(
+            {
+              name: 'Support by using',
+              value: '`/support` or `!support` depends prefix.',
+              inline: false
+            }
+          )
+          .setFooter({ text: `Requested by ${interaction.user.tag}` })
+          .setTimestamp();
+  
+        const row1 = new ActionRowBuilder().addComponents(
+          new ButtonBuilder()
+            .setLabel('Portfolio')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://ziolken.pages.dev'),
+  
+          new ButtonBuilder()
+            .setLabel('VN Translator')
+            .setStyle(ButtonStyle.Link)
+            .setURL('https://vntranslator.pages.dev'),
+        );
+  
+        return message.reply({
+          embeds: [embed],
+          components: [row1]
+        });
+      }
+    }
   }
 ];
