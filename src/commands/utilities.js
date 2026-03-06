@@ -17,6 +17,264 @@ function hasDisallowedMentions(text) {
   return /@everyone|@here|<@!?\d+>|<@&\d+>|<#\d+>/.test(s);
 }
 
+const LINGVA_INSTANCES = [
+  'https://lingva.lunar.icu',
+  'https://lingva.dialectapp.org',
+  'https://lingva.ml',
+  'https://lingva.vercel.app',
+  'https://translate.plausibility.cloud',
+  'https://lingva.garudalinux.org',
+];
+
+const TRANSLATE_LANGS = [
+  { alias: 'auto', code: 'auto', name: 'Auto Detect' },
+
+  { alias: 'vi', code: 'vi', name: 'Vietnamese' },
+  { alias: 'us', code: 'en', name: 'United States' },
+  { alias: 'uk', code: 'en', name: 'United Kingdom' },
+  { alias: 'cn', code: 'zh', name: 'Chinese' },
+  { alias: 'jp', code: 'ja', name: 'Japanese' },
+  { alias: 'kr', code: 'ko', name: 'Korean' },
+  { alias: 'fr', code: 'fr', name: 'French' },
+  { alias: 'de', code: 'de', name: 'German' },
+  { alias: 'es', code: 'es', name: 'Spanish' },
+  { alias: 'it', code: 'it', name: 'Italian' },
+  { alias: 'ru', code: 'ru', name: 'Russian' },
+  { alias: 'pt', code: 'pt', name: 'Portuguese' },
+  { alias: 'tr', code: 'tr', name: 'Turkish' },
+  { alias: 'id', code: 'id', name: 'Indonesian' },
+  { alias: 'th', code: 'th', name: 'Thai' },
+  { alias: 'ar', code: 'ar', name: 'Arabic' },
+  { alias: 'hi', code: 'hi', name: 'Hindi' },
+  { alias: 'pl', code: 'pl', name: 'Polish' },
+  { alias: 'nl', code: 'nl', name: 'Dutch' },
+  { alias: 'sv', code: 'sv', name: 'Swedish' },
+  { alias: 'fi', code: 'fi', name: 'Finnish' },
+  { alias: 'da', code: 'da', name: 'Danish' },
+  { alias: 'no', code: 'no', name: 'Norwegian' },
+  { alias: 'cs', code: 'cs', name: 'Czech' },
+  { alias: 'el', code: 'el', name: 'Greek' },
+  { alias: 'ro', code: 'ro', name: 'Romanian' },
+  { alias: 'hu', code: 'hu', name: 'Hungarian' },
+  { alias: 'he', code: 'he', name: 'Hebrew' },
+  { alias: 'bn', code: 'bn', name: 'Bengali' },
+  { alias: 'fa', code: 'fa', name: 'Persian' },
+  { alias: 'tl', code: 'tl', name: 'Filipino' },
+  { alias: 'ms', code: 'ms', name: 'Malay' },
+  { alias: 'ur', code: 'ur', name: 'Urdu' },
+  { alias: 'ta', code: 'ta', name: 'Tamil' },
+  { alias: 'te', code: 'te', name: 'Telugu' },
+  { alias: 'ukr', code: 'uk', name: 'Ukrainian' },
+];
+
+const LANG_ALIAS_MAP = new Map(
+  TRANSLATE_LANGS.map(item => [item.alias.toLowerCase(), item])
+);
+
+function resolveTranslateLang(alias) {
+  return LANG_ALIAS_MAP.get(String(alias || '').toLowerCase()) || null;
+}
+
+function formatLangList() {
+  return TRANSLATE_LANGS
+    .map(lang => `\`${lang.alias}-${lang.name}\``)
+    .join(' • ');
+}
+
+function chunkText(text, max = 900) {
+  const out = [];
+  let s = String(text || '').trim();
+  while (s.length > max) {
+    out.push(s.slice(0, max));
+    s = s.slice(max);
+  }
+  if (s) out.push(s);
+  return out;
+}
+
+async function lingvaTranslate(text, targetAlias, sourceAlias = 'auto') {
+  const source = resolveTranslateLang(sourceAlias) || resolveTranslateLang('auto');
+  const target = resolveTranslateLang(targetAlias);
+
+  if (!target) {
+    const supported = TRANSLATE_LANGS
+      .filter(x => x.alias !== 'auto')
+      .map(x => x.alias)
+      .join(', ');
+    throw new Error(`Unsupported target language. Use \`/langs\` or \`!langs\`.\nSupported: ${supported}`);
+  }
+
+  const encodedText = encodeURIComponent(String(text || '').trim());
+  if (!encodedText) throw new Error('Missing text to translate.');
+
+  let lastError = null;
+
+  for (const base of LINGVA_INSTANCES) {
+    try {
+      const url = `${base}/api/v1/${source.code}/${target.code}/${encodedText}`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'ZiolKen-Bot/1.4.3'
+        }
+      });
+
+      if (!res.ok) {
+        lastError = new Error(`HTTP ${res.status} from ${base}`);
+        continue;
+      }
+
+      const data = await res.json();
+
+      const translated =
+        data?.translation ||
+        data?.target?.text ||
+        data?.translatedText ||
+        data?.text;
+
+      if (!translated) {
+        lastError = new Error(`Invalid response from ${base}`);
+        continue;
+      }
+
+      return {
+        translated,
+        source,
+        target,
+        instance: base,
+        raw: data
+      };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('All Lingva instances failed.');
+}
+
+async function sendTranslateResult(target, authorTag, originalText, result) {
+  const embed = new EmbedBuilder()
+    .setColor(0xFF00FF)
+    .setTitle('Translation')
+    .setDescription('Quick translation result')
+    .addFields(
+      {
+        name: 'From',
+        value: `\`${result.source.alias}-${result.source.name}\``,
+        inline: true
+      },
+      {
+        name: 'To',
+        value: `\`${result.target.alias}-${result.target.name}\``,
+        inline: true
+      },
+      {
+        name: 'Engine',
+        value: '`Lingva`',
+        inline: true
+      },
+      {
+        name: 'Original',
+        value: String(originalText).slice(0, 1024),
+        inline: false
+      }
+    )
+    .setFooter({ text: `Requested by ${authorTag}` })
+    .setTimestamp();
+
+  const translatedChunks = chunkText(result.translated, 1000);
+  embed.addFields({
+    name: 'Translated',
+    value: translatedChunks[0] || 'No result.',
+    inline: false
+  });
+
+  if (translatedChunks[1]) {
+    embed.addFields({
+      name: 'Translated (cont.)',
+      value: translatedChunks[1],
+      inline: false
+    });
+  }
+
+  if (typeof target.editReply === 'function' && (target.deferred || target.replied)) {
+    return target.editReply({ embeds: [embed] });
+  }
+
+  return target.reply({ embeds: [embed] });
+}
+
+async function sendLangsMessage(target, authorTag) {
+  const lines = [];
+  let current = '';
+
+  for (const item of TRANSLATE_LANGS) {
+    const piece = `\`${item.alias}-${item.name}\``;
+    if ((current + ' ' + piece).length > 950) {
+      lines.push(current.trim());
+      current = piece;
+    } else {
+      current += ` ${piece}`;
+    }
+  }
+  if (current.trim()) lines.push(current.trim());
+
+  const embed = new EmbedBuilder()
+    .setColor(0xFF00FF)
+    .setTitle('Supported Translate Langs')
+    .setDescription('Use with `/translate text:<text> targetlang:<alias>` or `!translate <text> -<alias>`')
+    .setFooter({ text: `Requested by ${authorTag}` })
+    .setTimestamp();
+
+  lines.forEach((line, index) => {
+    embed.addFields({
+      name: index === 0 ? 'Aliases' : `Aliases (${index + 1})`,
+      value: line,
+      inline: false
+    });
+  });
+
+  if (typeof target.editReply === 'function' && (target.deferred || target.replied)) {
+    return target.editReply({ embeds: [embed] });
+  }
+
+  return target.reply({ embeds: [embed] });
+}
+
+async function sendLangsMessage(target, authorTag) {
+  const lines = [];
+  let current = '';
+
+  for (const item of TRANSLATE_LANGS) {
+    const piece = `\`${item.alias}-${item.name}\``;
+    if ((current + ' ' + piece).length > 950) {
+      lines.push(current.trim());
+      current = piece;
+    } else {
+      current += ` ${piece}`;
+    }
+  }
+  if (current.trim()) lines.push(current.trim());
+
+  const embed = new EmbedBuilder()
+    .setColor(0xFF00FF)
+    .setTitle('Supported Translate Langs')
+    .setDescription('Use with `/translate text:<text> targetlang:<alias>` or `!translate <text> -<alias>`')
+    .setFooter({ text: `Requested by ${authorTag}` })
+    .setTimestamp();
+
+  lines.forEach((line, index) => {
+    embed.addFields({
+      name: index === 0 ? 'Aliases' : `Aliases (${index + 1})`,
+      value: line,
+      inline: false
+    });
+  });
+
+  return target.reply({ embeds: [embed] });
+}
+
 module.exports = [
   {
     name: 'help',
@@ -937,6 +1195,111 @@ module.exports = [
           embeds: [embed],
           components: [row1]
         });
+      }
+    }
+  },
+
+  {
+    name: 'translate',
+    aliases: ['tr','tl','trans'],
+    category: 'utilities',
+    description: 'Translate text using Lingva',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('translate')
+        .setDescription('Translate text using Lingva')
+        .addStringOption(o =>
+          o.setName('text')
+            .setDescription('Text to translate')
+            .setRequired(true)
+        )
+        .addStringOption(o =>
+          o.setName('targetlang')
+            .setDescription('Target language alias, example: vi, us, uk, cn, jp')
+            .setRequired(true)
+        ),
+      async run(interaction) {
+        const text = interaction.options.getString('text', true).trim();
+        const targetlang = interaction.options.getString('targetlang', true).trim().toLowerCase();
+  
+        if (!text) {
+          return interaction.reply({
+            content: '❌ Please provide text to translate.',
+            ephemeral: true
+          });
+        }
+  
+        await interaction.deferReply();
+  
+        try {
+          const result = await lingvaTranslate(text, targetlang, 'auto');
+          return sendTranslateResult(interaction, interaction.user.tag, text, result);
+        } catch (err) {
+          return interaction.editReply({
+            content:
+              `❌ Could not translate that text.\n` +
+              `Reason: ${err.message || 'Unknown error'}\n` +
+              `Use \`/langs\` to view supported aliases.`
+          });
+        }
+      }
+    },
+    prefix: {
+      async run(message, args) {
+        if (!args.length) {
+          return message.reply(
+            `Usage: \`!translate <text> -<lang>\`\nExample: \`!translate hello world -vi\``
+          );
+        }
+  
+        let targetlang = null;
+        const textParts = [];
+  
+        for (const arg of args) {
+          if (!targetlang && /^-[a-z0-9_-]+$/i.test(arg)) {
+            targetlang = arg.slice(1).toLowerCase();
+          } else {
+            textParts.push(arg);
+          }
+        }
+  
+        const text = textParts.join(' ').trim();
+  
+        if (!text || !targetlang) {
+          return message.reply(
+            `Usage: \`!translate <text> -<lang>\`\nExample: \`!translate I love coding -vi\`\nUse \`!langs\` to see aliases.`
+          );
+        }
+  
+        try {
+          const result = await lingvaTranslate(text, targetlang, 'auto');
+          return sendTranslateResult(message, message.author.tag, text, result);
+        } catch (err) {
+          return message.reply(
+            `❌ Could not translate that text.\n` +
+            `Reason: ${err.message || 'Unknown error'}\n` +
+            `Use \`!langs\` to view supported aliases.`
+          );
+        }
+      }
+    }
+  },
+  {
+    name: 'langs',
+    aliases: ['lang','languages','translatelangs','listlang','targetlangs'],
+    category: 'utilities',
+    description: 'Show supported translation languages',
+    slash: {
+      data: new SlashCommandBuilder()
+        .setName('langs')
+        .setDescription('Show supported translation languages'),
+      async run(interaction) {
+        return sendLangsMessage(interaction, interaction.user.tag);
+      }
+    },
+    prefix: {
+      async run(message) {
+        return sendLangsMessage(message, message.author.tag);
       }
     }
   }
