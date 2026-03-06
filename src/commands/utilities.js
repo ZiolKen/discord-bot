@@ -1098,7 +1098,6 @@ module.exports = [
               inline: false
             }
           )
-          .setFooter({ text: `Requested by ${interaction.user.tag}` })
           .setTimestamp();
   
         const row1 = new ActionRowBuilder().addComponents(
@@ -1176,7 +1175,6 @@ module.exports = [
               inline: false
             }
           )
-          .setFooter({ text: `Requested by ${interaction.user.tag}` })
           .setTimestamp();
   
         const row1 = new ActionRowBuilder().addComponents(
