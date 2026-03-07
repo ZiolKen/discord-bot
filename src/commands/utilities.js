@@ -160,25 +160,15 @@ async function sendTranslateResult(target, authorTag, originalText, result) {
     .setDescription('Quick translation result')
     .addFields(
       {
-        name: 'From',
-        value: `\`${result.source.alias}-${result.source.name}\``,
-        inline: true
+        name: 'Original',
+        value: String(originalText).slice(0, 1024),
+        inline: false
       },
       {
         name: 'To',
         value: `\`${result.target.alias}-${result.target.name}\``,
         inline: true
       },
-      {
-        name: 'Engine',
-        value: '`Lingva`',
-        inline: true
-      },
-      {
-        name: 'Original',
-        value: String(originalText).slice(0, 1024),
-        inline: false
-      }
     )
     .setFooter({ text: `Requested by ${authorTag}` })
     .setTimestamp();
@@ -1047,23 +1037,16 @@ module.exports = [
     name: 'support',
     aliases: ['supporter','donate','donor','patreon','patron','buymeacoffee','bmac','bmc'],
     category: 'utilities',
-    description: 'Sponsor this bot',
+    description: 'Sponsor this project',
     slash: {
       data: new SlashCommandBuilder()
         .setName('support')
-        .setDescription('Sponsor this bot'),
+        .setDescription('Sponsor this project'),
       async run(interaction) {
         const embed = new EmbedBuilder()
-          .setTitle('Support')
-          .setDescription('Sponsor this project.')
+          .setTitle('Sponsor this project')
+          .setDescription('Donate to ZiolKen Bot.\nJoin by clicking one of the following choices below!')
           .setColor(0xFF00FF)
-          .addFields(
-            {
-              name: 'Donate to ZiolKen Bot.',
-              value: 'Join by clicking one of the following choices below!',
-              inline: false
-            }
-          )
           .setFooter({ text: `Requested by ${interaction.user.tag}` })
           .setTimestamp();
   
@@ -1088,16 +1071,9 @@ module.exports = [
     prefix: {
       async run(message) {
         const embed = new EmbedBuilder()
-          .setTitle('Support')
-          .setDescription('Sponsor this project.')
+          .setTitle('Sponsor this project')
+          .setDescription('Donate to ZiolKen Bot.\nJoin by clicking one of the following choices below!')
           .setColor(0xFF00FF)
-          .addFields(
-            {
-              name: 'Donate to ZiolKen Bot.',
-              value: 'Join by clicking one of the following choices below!',
-              inline: false
-            }
-          )
           .setTimestamp();
   
         const row1 = new ActionRowBuilder().addComponents(
@@ -1124,23 +1100,17 @@ module.exports = [
     name: 'credit',
     aliases: ['owner','founder','developer','coder','programmer','creator'],
     category: 'utilities',
-    description: 'ZiolKen Bot credit',
+    description: 'ZiolKen Bot Developer',
     slash: {
       data: new SlashCommandBuilder()
         .setName('credit')
-        .setDescription('ZiolKen Bot credit'),
+        .setDescription('ZiolKen Bot Developer'),
       async run(interaction) {
         const embed = new EmbedBuilder()
-          .setTitle('ZiolKen Bot credit')
-          .setDescription('By @ziolken.')
+          .setTitle('Bot Developer')
+          .setDescription('Created by **@ziolken**\nSupport by using\n`/support` or `!support`')
           .setColor(0xFF00FF)
-          .addFields(
-            {
-              name: 'Support by using',
-              value: '`/support` or `!support` depends prefix.',
-              inline: false
-            }
-          )
+          .setThumbnail(client.user.displayAvatarURL())
           .setFooter({ text: `Requested by ${interaction.user.tag}` })
           .setTimestamp();
   
@@ -1165,16 +1135,10 @@ module.exports = [
     prefix: {
       async run(message) {
         const embed = new EmbedBuilder()
-          .setTitle('ZiolKen Bot credit')
-          .setDescription('By @ziolken.')
+          .setTitle('Bot Developer')
+          .setDescription('Created by **@ziolken**\nSupport by using\n`/support` or `!support`')
           .setColor(0xFF00FF)
-          .addFields(
-            {
-              name: 'Support by using',
-              value: '`/support` or `!support` depends prefix.',
-              inline: false
-            }
-          )
+          .setThumbnail(client.user.displayAvatarURL())
           .setTimestamp();
   
         const row1 = new ActionRowBuilder().addComponents(
