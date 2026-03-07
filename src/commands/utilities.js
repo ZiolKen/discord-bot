@@ -1110,7 +1110,6 @@ module.exports = [
           .setTitle('Bot Developer')
           .setDescription('Created by **@ziolken**\nSupport by using\n`/support` or `!support`')
           .setColor(0xFF00FF)
-          .setThumbnail(client.user.displayAvatarURL())
           .setFooter({ text: `Requested by ${interaction.user.tag}` })
           .setTimestamp();
   
@@ -1138,7 +1137,6 @@ module.exports = [
           .setTitle('Bot Developer')
           .setDescription('Created by **@ziolken**\nSupport by using\n`/support` or `!support`')
           .setColor(0xFF00FF)
-          .setThumbnail(client.user.displayAvatarURL())
           .setTimestamp();
   
         const row1 = new ActionRowBuilder().addComponents(
