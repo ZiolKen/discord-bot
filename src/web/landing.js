@@ -208,7 +208,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
                   </div>
                   <div class="tiny">
                     <div class="tinyK">Node</div>
-                    <div class="tinyV" id="statPing">20.20.0</div>
+                    <div class="tinyV" id="statPing">20.20.x</div>
                   </div>
                   <div class="tiny">
                     <div class="tinyK">discord.js</div>
@@ -413,7 +413,7 @@ function renderLandingPage({ inviteUrl, appName, botAvatar, supportServer, statu
           <span><span id="miniStatus">Version: 1.4.3</span> <span class="muted2" id="updated"></span></span>
         </div>
         <div class="rightMini2">
-          <span class="pill2">Node <span class="muted2" id="version">20.20.0</span></span>
+          <span class="pill2">Node <span class="muted2" id="version">20.20.x</span></span>
           <span class="pill2">Host <span class="muted2" id="host">Render</span></span>
           <a class="pill2 linkish" href="${invite}">Invite</a>
         </div>
