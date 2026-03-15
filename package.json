@@ -9,7 +9,7 @@
     "migrate": "node scripts/migrate.js"
   },
   "engines": {
-    "node": "20.x"
+    "node": "22.x"
   },
   "dependencies": {
     "@snazzah/davey": "^0.1.9",
