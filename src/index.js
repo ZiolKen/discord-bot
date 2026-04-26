@@ -21,6 +21,7 @@ const { popDueReminders } = require('./services/reminders');
 const { listIncidents, createIncident: createIncidentDb, resolveIncident: resolveIncidentDb } = require('./services/incidents');
 const { handleButton } = require('./services/gameSessions');
 const { renderLandingPage } = require('./web/landing');
+const { migrateLegacyEconomyToGlobal } = require('./services/economyMigration');
 
 if (!process.env.TOKEN || !process.env.CLIENT_ID) {
   console.error('Missing TOKEN or CLIENT_ID in environment variables.');
@@ -75,6 +76,14 @@ const afkMap = new Map();
 
 client.once(Events.ClientReady, async () => {
   console.log(`Logged in as ${client.user.tag}`);
+
+  if (process.env.ECONOMY_AUTO_MIGRATE !== '0') {
+    try {
+      await migrateLegacyEconomyToGlobal({ force: process.env.ECONOMY_FORCE_MIGRATE === '1' });
+    } catch (err) {
+      console.warn('[Economy migration] Failed:', err);
+    }
+  }
   client.user.setActivity({ name: '/help | botstatus.vercel.app', type: ActivityType.Playing });
 
   try {

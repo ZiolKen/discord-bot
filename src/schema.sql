@@ -149,3 +149,9 @@ CREATE TABLE IF NOT EXISTS trade_items (
   CHECK (qty > 0),
   FOREIGN KEY (trade_id) REFERENCES trades(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS bot_meta (
+  key        TEXT PRIMARY KEY,
+  value      TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
