@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { shards } = require('../src/db');
+const { migrateLegacyEconomyToGlobal } = require('../src/services/economyMigration');
 
 async function main() {
   const schemaPath = path.join(__dirname, '..', 'src', 'schema.sql');
@@ -29,6 +30,8 @@ async function main() {
       client.release();
     }
   }
+
+  await migrateLegacyEconomyToGlobal({ force: process.env.ECONOMY_FORCE_MIGRATE === '1' });
 
   console.log('✅ All shards migrated successfully');
   process.exit(0);
