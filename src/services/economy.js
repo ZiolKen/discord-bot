@@ -1,4 +1,5 @@
 const db = require('../db');
+const { economyGuildId } = require('./economyScope');
 const { capInt32 } = require('./casino');
 
 const CLAIM_FIELDS = new Set(['daily_at', 'weekly_at', 'fish_at', 'hunt_at']);
@@ -42,6 +43,7 @@ function calcWeeklyGain(streak) {
 }
 
 async function getOrCreate(guildId, userId) {
+  guildId = economyGuildId(guildId);
   const uid = String(userId);
   const { rows } = await db.queryGuild(
     guildId,
@@ -61,6 +63,7 @@ async function getOrCreate(guildId, userId) {
 }
 
 async function addCoins(guildId, userId, amount) {
+  guildId = economyGuildId(guildId);
   if (!Number.isInteger(amount) || amount <= 0) throw new Error('Invalid add amount');
 
   const add = capInt32(amount);
@@ -77,6 +80,7 @@ async function addCoins(guildId, userId, amount) {
 }
 
 async function claimDaily(guildId, userId) {
+  guildId = economyGuildId(guildId);
   return db.txGuild(guildId, async (client) => {
     await client.query(
       `INSERT INTO user_stats (guild_id, user_id)
@@ -134,6 +138,7 @@ async function claimDaily(guildId, userId) {
 }
 
 async function claimWeekly(guildId, userId) {
+  guildId = economyGuildId(guildId);
   return db.txGuild(guildId, async (client) => {
     await client.query(
       `INSERT INTO user_stats (guild_id, user_id)
@@ -191,6 +196,7 @@ async function claimWeekly(guildId, userId) {
 }
 
 async function trySpendCoins(guildId, userId, amount) {
+  guildId = economyGuildId(guildId);
   if (!Number.isInteger(amount) || amount <= 0) throw new Error('Invalid spend amount');
 
   const { rows } = await db.queryGuild(
@@ -211,6 +217,7 @@ async function trySpendCoins(guildId, userId, amount) {
 }
 
 async function transferCoins(guildId, fromUserId, toUserId, amount) {
+  guildId = economyGuildId(guildId);
   if (!Number.isInteger(amount) || amount <= 0) throw new Error('Invalid transfer amount');
   if (String(fromUserId) === String(toUserId)) throw new Error('Invalid transfer target');
 
@@ -245,6 +252,7 @@ async function transferCoins(guildId, fromUserId, toUserId, amount) {
 }
 
 async function setClaim(guildId, userId, field) {
+  guildId = economyGuildId(guildId);
   if (!CLAIM_FIELDS.has(field)) throw new Error('Invalid claim field');
 
   await db.queryGuild(

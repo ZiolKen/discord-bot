@@ -1,4 +1,5 @@
 const db = require('../db');
+const { economyGuildId } = require('./economyScope');
 const { getItem } = require('../data/items');
 const { validateUserPrice } = require('./items');
 
@@ -27,6 +28,7 @@ function assertQty(qty) {
 }
 
 async function createListing(guildId, sellerId, itemId, qty, priceEach, ttlHours = 72) {
+  guildId = economyGuildId(guildId);
   assertQty(qty);
   const item = getItem(itemId);
   if (!item) throw new Error('Unknown item');
@@ -65,6 +67,7 @@ async function createListing(guildId, sellerId, itemId, qty, priceEach, ttlHours
 }
 
 async function listListings(guildId, { itemId, sellerId, page = 1, pageSize = 10 } = {}) {
+  guildId = economyGuildId(guildId);
   const p = Math.max(1, Math.min(1000, Number(page) || 1));
   const size = Math.max(1, Math.min(25, Number(pageSize) || 10));
   const offset = (p - 1) * size;
@@ -99,6 +102,7 @@ async function listListings(guildId, { itemId, sellerId, page = 1, pageSize = 10
 }
 
 async function cancelListing(guildId, sellerId, listingId) {
+  guildId = economyGuildId(guildId);
   const id = Number(listingId);
   if (!Number.isInteger(id) || id <= 0) throw new Error('Invalid listing id');
 
@@ -138,6 +142,7 @@ async function cancelListing(guildId, sellerId, listingId) {
 }
 
 async function buyListing(guildId, buyerId, listingId, qty) {
+  guildId = economyGuildId(guildId);
   const id = Number(listingId);
   if (!Number.isInteger(id) || id <= 0) throw new Error('Invalid listing id');
   const q = qty == null ? null : Number(qty);

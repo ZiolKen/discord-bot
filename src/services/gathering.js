@@ -1,4 +1,5 @@
 const db = require('../db');
+const { economyGuildId } = require('./economyScope');
 const { getItem } = require('../data/items');
 const { randInt, weightedPick, capInt32 } = require('./casino');
 
@@ -83,6 +84,7 @@ async function addInventoryTx(client, guildId, userId, itemId, qty) {
 }
 
 async function fish(guildId, userId) {
+  guildId = economyGuildId(guildId);
   return db.txGuild(guildId, async (client) => {
     await client.query(
       `INSERT INTO user_stats (guild_id, user_id)
@@ -132,6 +134,7 @@ async function fish(guildId, userId) {
 }
 
 async function hunt(guildId, userId) {
+  guildId = economyGuildId(guildId);
   return db.txGuild(guildId, async (client) => {
     await client.query(
       `INSERT INTO user_stats (guild_id, user_id)

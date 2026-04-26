@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const db = require('../db');
+const { economyGuildId } = require('./economyScope');
 const { getItem } = require('../data/items');
 
 function assertQty(qty) {
@@ -41,6 +42,7 @@ async function expireTradeTx(client, guildId, tradeId) {
 }
 
 async function createTrade(guildId, userA, userB, ttlMinutes = 10) {
+  guildId = economyGuildId(guildId);
   const a = String(userA);
   const b = String(userB);
   if (!a || !b || a === b) throw new Error('Invalid users');
@@ -60,6 +62,7 @@ async function createTrade(guildId, userA, userB, ttlMinutes = 10) {
 }
 
 async function getTrade(guildId, tradeId) {
+  guildId = economyGuildId(guildId);
   const id = String(tradeId);
   const { rows } = await db.queryGuild(
     guildId,
@@ -82,6 +85,7 @@ async function listTradeItemsTx(client, guildId, tradeId) {
 }
 
 async function acceptTrade(guildId, tradeId, userId) {
+  guildId = economyGuildId(guildId);
   const id = String(tradeId);
   const uid = String(userId);
 
@@ -110,6 +114,7 @@ async function acceptTrade(guildId, tradeId, userId) {
 }
 
 async function cancelTrade(guildId, tradeId, userId) {
+  guildId = economyGuildId(guildId);
   const id = String(tradeId);
   const uid = String(userId);
 
@@ -144,6 +149,7 @@ async function cancelTrade(guildId, tradeId, userId) {
 }
 
 async function addTradeItem(guildId, tradeId, userId, itemId, qty) {
+  guildId = economyGuildId(guildId);
   assertQty(qty);
   const id = String(tradeId);
   const uid = String(userId);
@@ -202,6 +208,7 @@ async function addTradeItem(guildId, tradeId, userId, itemId, qty) {
 }
 
 async function removeTradeItem(guildId, tradeId, userId, itemId, qty) {
+  guildId = economyGuildId(guildId);
   assertQty(qty);
   const id = String(tradeId);
   const uid = String(userId);
@@ -260,6 +267,7 @@ async function removeTradeItem(guildId, tradeId, userId, itemId, qty) {
 }
 
 async function confirmTrade(guildId, tradeId, userId) {
+  guildId = economyGuildId(guildId);
   const id = String(tradeId);
   const uid = String(userId);
 
@@ -331,6 +339,25 @@ async function confirmTrade(guildId, tradeId, userId) {
   });
 }
 
+async function getTradeOfferQty(guildId, tradeId, userId, itemId) {
+  guildId = economyGuildId(guildId);
+  const id = String(tradeId);
+  const uid = String(userId);
+  const item = getItem(itemId);
+  if (!item) return 0;
+
+  const { rows } = await db.queryGuild(
+    guildId,
+    `SELECT ti.qty
+     FROM trade_items ti
+     INNER JOIN trades t ON t.id=ti.trade_id
+     WHERE t.guild_id=$1 AND t.id=$2 AND ti.user_id=$3 AND ti.item_id=$4
+     LIMIT 1`,
+    [guildId, id, uid, item.id]
+  );
+  return Number(rows[0]?.qty || 0);
+}
+
 module.exports = {
   createTrade,
   getTrade,
@@ -338,5 +365,6 @@ module.exports = {
   cancelTrade,
   addTradeItem,
   removeTradeItem,
-  confirmTrade
+  confirmTrade,
+  getTradeOfferQty
 };

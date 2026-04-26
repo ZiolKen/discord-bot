@@ -1,4 +1,5 @@
 const db = require('../db');
+const { economyGuildId } = require('./economyScope');
 const { getItem, userPriceBounds } = require('../data/items');
 const { randInt, weightedPick, capInt32 } = require('./casino');
 
@@ -13,6 +14,7 @@ function assertIntPrice(p) {
 }
 
 async function getInventory(guildId, userId, limit = 50) {
+  guildId = economyGuildId(guildId);
   const { rows } = await db.queryGuild(
     guildId,
     `SELECT item_id, qty
@@ -26,6 +28,7 @@ async function getInventory(guildId, userId, limit = 50) {
 }
 
 async function addItem(guildId, userId, itemId, qty) {
+  guildId = economyGuildId(guildId);
   assertQty(qty);
   const item = getItem(itemId);
   if (!item) throw new Error('Unknown item');
@@ -73,12 +76,14 @@ async function tryRemoveItemTx(client, guildId, userId, itemId, qty) {
 }
 
 async function tryRemoveItem(guildId, userId, itemId, qty) {
+  guildId = economyGuildId(guildId);
   return db.txGuild(guildId, async (client) => {
     return tryRemoveItemTx(client, guildId, userId, itemId, qty);
   });
 }
 
 async function buyFromBot(guildId, userId, itemId, qty) {
+  guildId = economyGuildId(guildId);
   assertQty(qty);
   const item = getItem(itemId);
   if (!item || !Number.isInteger(item.buyPrice) || item.buyPrice <= 0) throw new Error('Item is not purchasable');
@@ -118,6 +123,7 @@ async function buyFromBot(guildId, userId, itemId, qty) {
 }
 
 async function sellToBot(guildId, userId, itemId, qty) {
+  guildId = economyGuildId(guildId);
   assertQty(qty);
   const item = getItem(itemId);
   if (!item || !Number.isInteger(item.sellPrice) || item.sellPrice <= 0) throw new Error('Item cannot be sold');
@@ -175,6 +181,7 @@ function crateLoot(crateId) {
 }
 
 async function openCrate(guildId, userId, crateId) {
+  guildId = economyGuildId(guildId);
   const crate = getItem(crateId);
   if (!crate || crate.category !== 'crate') throw new Error('Not a crate');
 
@@ -237,6 +244,19 @@ async function openCrate(guildId, userId, crateId) {
   });
 }
 
+async function getItemQty(guildId, userId, itemId) {
+  guildId = economyGuildId(guildId);
+  const item = getItem(itemId);
+  if (!item) return 0;
+
+  const { rows } = await db.queryGuild(
+    guildId,
+    `SELECT qty FROM inventory WHERE guild_id=$1 AND user_id=$2 AND item_id=$3 LIMIT 1`,
+    [guildId, userId, item.id]
+  );
+  return Number(rows[0]?.qty || 0);
+}
+
 function cleanTitle(input) {
   const s = String(input || '').replace(/\s+/g, ' ').replace(/[\r\n\t]/g, ' ').trim();
   if (!s) return null;
@@ -254,6 +274,7 @@ function parseHexColor(input) {
 }
 
 async function useItem(guildId, userId, itemId, arg) {
+  guildId = economyGuildId(guildId);
   const item = getItem(itemId);
   if (!item) throw new Error('Unknown item');
 
@@ -411,6 +432,7 @@ function validateUserPrice(item, priceEach) {
 
 module.exports = {
   getInventory,
+  getItemQty,
   addItem,
   tryRemoveItem,
   buyFromBot,
