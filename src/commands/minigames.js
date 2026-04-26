@@ -5,6 +5,7 @@ const db = require('../db');
 const { toDiscordTs } = require('../utils/time');
 const { randInt } = require('../services/casino');
 const gathering = require('../services/gathering');
+const { economyGuildId } = require('../services/economyScope');
 
 const TTT_LINES = [
   [0,1,2],[3,4,5],[6,7,8],
@@ -243,9 +244,9 @@ module.exports = [
       data: new SlashCommandBuilder().setName('leaderboard').setDescription('Show coin leaderboard'),
       async run(interaction) {
         const { rows } = await db.queryGuild(
-          interaction.guildId,
+          economyGuildId(interaction.guildId),
           `SELECT user_id, coins FROM user_stats WHERE guild_id=$1 ORDER BY coins DESC NULLS LAST LIMIT 10`,
-          [interaction.guildId]
+          [economyGuildId(interaction.guildId)]
         );
         if (!rows.length) return interaction.reply('No leaderboard data yet.');
         const lines = rows.map((r, i) => `${i+1}. <@${r.user_id}> — **${r.coins}**`);
@@ -254,9 +255,9 @@ module.exports = [
     },
     prefix: { async run(message) {
       const { rows } = await db.queryGuild(
-        message.guild.id,
+        economyGuildId(message.guild.id),
         `SELECT user_id, coins FROM user_stats WHERE guild_id=$1 ORDER BY coins DESC NULLS LAST LIMIT 10`,
-        [message.guild.id]
+        [economyGuildId(message.guild.id)]
       );
       if (!rows.length) return message.reply('No leaderboard data yet.');
       const lines = rows.map((r, i) => `${i+1}. <@${r.user_id}> — **${r.coins}**`);

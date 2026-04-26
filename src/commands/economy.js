@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { listShopItems, getItem, normalizeItemId, userPriceBounds } = require('../data/items');
-const { getInventory, buyFromBot, sellToBot, useItem, validateUserPrice } = require('../services/items');
+const { getInventory, getItemQty, buyFromBot, sellToBot, useItem, validateUserPrice } = require('../services/items');
 const { getOrCreate, DAILY_COOLDOWN_MS, WEEKLY_COOLDOWN_MS } = require('../services/economy');
 const { toDiscordTs } = require('../utils/time');
 const market = require('../services/market');
@@ -25,6 +25,30 @@ function parseQty(v) {
 function parseId(v) {
   const id = normalizeItemId(v);
   return id || null;
+}
+
+function isAllQty(v) {
+  return ['all', 'max'].includes(String(v ?? '').trim().toLowerCase());
+}
+
+async function resolveOwnedQty(guildId, userId, itemId, raw, defaultQty = 1) {
+  if (isAllQty(raw)) {
+    const qty = await getItemQty(guildId, userId, itemId);
+    return qty > 0 ? Math.min(1_000_000, qty) : null;
+  }
+  if (raw == null && defaultQty == null) return null;
+  return parseQty(raw == null ? defaultQty : raw);
+}
+
+async function resolveBuyQty(guildId, userId, item, raw, defaultQty = 1) {
+  if (isAllQty(raw)) {
+    if (!item || !Number.isInteger(item.buyPrice) || item.buyPrice <= 0) return null;
+    const row = await getOrCreate(guildId, userId);
+    const qty = Math.floor(Number(row.coins || 0) / item.buyPrice);
+    return qty > 0 ? Math.min(1_000_000, qty) : null;
+  }
+  if (raw == null && defaultQty == null) return null;
+  return parseQty(raw == null ? defaultQty : raw);
 }
 
 function invEmbed(user, rows) {
@@ -137,10 +161,11 @@ module.exports = [
         .setName('buy')
         .setDescription('Buy an item from the bot shop')
         .addStringOption(o => o.setName('item').setDescription('Item id').setRequired(true))
-        .addIntegerOption(o => o.setName('qty').setDescription('Quantity').setRequired(false)),
+        .addStringOption(o => o.setName('qty').setDescription('Quantity, or all').setRequired(false)),
       async run(interaction) {
         const itemId = parseId(interaction.options.getString('item'));
-        const qty = parseQty(interaction.options.getInteger('qty'));
+        const item = getItem(itemId);
+        const qty = await resolveBuyQty(interaction.guildId, interaction.user.id, item, interaction.options.getString('qty'), 1);
         if (!itemId || !qty) return interaction.reply('Invalid item or quantity.');
 
         const out = await buyFromBot(interaction.guildId, interaction.user.id, itemId, qty).catch((e) => ({ error: e }));
@@ -158,8 +183,9 @@ module.exports = [
     prefix: {
       async run(message, args) {
         const itemId = parseId(args[0]);
-        const qty = parseQty(args[1] ? Number(args[1]) : 1);
-        if (!itemId || !qty) return message.reply('Usage: `!buy <item> [qty]`');
+        const item = getItem(itemId);
+        const qty = await resolveBuyQty(message.guild.id, message.author.id, item, args[1], 1);
+        if (!itemId || !qty) return message.reply('Usage: `!buy <item> [qty|all]`');
 
         const out = await buyFromBot(message.guild.id, message.author.id, itemId, qty).catch((e) => ({ error: e }));
         if (out?.error) return message.reply(`❌ ${out.error.message}`);
@@ -179,10 +205,10 @@ module.exports = [
         .setName('sell')
         .setDescription('Sell items to the bot')
         .addStringOption(o => o.setName('item').setDescription('Item id').setRequired(true))
-        .addIntegerOption(o => o.setName('qty').setDescription('Quantity').setRequired(false)),
+        .addStringOption(o => o.setName('qty').setDescription('Quantity, or all').setRequired(false)),
       async run(interaction) {
         const itemId = parseId(interaction.options.getString('item'));
-        const qty = parseQty(interaction.options.getInteger('qty'));
+        const qty = await resolveOwnedQty(interaction.guildId, interaction.user.id, itemId, interaction.options.getString('qty'), 1);
         if (!itemId || !qty) return interaction.reply('Invalid item or quantity.');
 
         const out = await sellToBot(interaction.guildId, interaction.user.id, itemId, qty).catch((e) => ({ error: e }));
@@ -200,8 +226,8 @@ module.exports = [
     prefix: {
       async run(message, args) {
         const itemId = parseId(args[0]);
-        const qty = parseQty(args[1] ? Number(args[1]) : 1);
-        if (!itemId || !qty) return message.reply('Usage: `!sell <item> [qty]`');
+        const qty = await resolveOwnedQty(message.guild.id, message.author.id, itemId, args[1], 1);
+        if (!itemId || !qty) return message.reply('Usage: `!sell <item> [qty|all]`');
 
         const out = await sellToBot(message.guild.id, message.author.id, itemId, qty).catch((e) => ({ error: e }));
         if (out?.error) return message.reply(`❌ ${out.error.message}`);
@@ -356,7 +382,7 @@ module.exports = [
           sc.setName('list')
             .setDescription('Create a listing (items are escrowed)')
             .addStringOption(o => o.setName('item').setDescription('Item id').setRequired(true))
-            .addIntegerOption(o => o.setName('qty').setDescription('Quantity').setRequired(true))
+            .addStringOption(o => o.setName('qty').setDescription('Quantity, or all').setRequired(true))
             .addIntegerOption(o => o.setName('price').setDescription('Price each').setRequired(true))
         )
         .addSubcommand(sc =>
@@ -369,7 +395,7 @@ module.exports = [
           sc.setName('buy')
             .setDescription('Buy from a listing')
             .addIntegerOption(o => o.setName('id').setDescription('Listing id').setRequired(true))
-            .addIntegerOption(o => o.setName('qty').setDescription('Quantity (default: all)').setRequired(false))
+            .addStringOption(o => o.setName('qty').setDescription('Quantity, or all (default: all)').setRequired(false))
         )
         .addSubcommand(sc =>
           sc.setName('cancel')
@@ -381,7 +407,7 @@ module.exports = [
 
         if (sub === 'list') {
           const itemId = parseId(interaction.options.getString('item'));
-          const qty = parseQty(interaction.options.getInteger('qty'));
+          const qty = await resolveOwnedQty(interaction.guildId, interaction.user.id, itemId, interaction.options.getString('qty'), null);
           const price = interaction.options.getInteger('price');
           if (!itemId || !qty) return interaction.reply('Invalid item or quantity.');
 
@@ -418,7 +444,9 @@ module.exports = [
 
         if (sub === 'buy') {
           const id = interaction.options.getInteger('id');
-          const qty = interaction.options.getInteger('qty');
+          const qtyRaw = interaction.options.getString('qty');
+          const qty = isAllQty(qtyRaw) || qtyRaw == null ? null : parseQty(qtyRaw);
+          if (qtyRaw != null && !isAllQty(qtyRaw) && !qty) return interaction.reply('Invalid quantity.');
           const out = await market.buyListing(interaction.guildId, interaction.user.id, id, qty);
           if (!out) return interaction.reply('❌ Listing not found or not active.');
           if (out.expired) return interaction.reply('❌ Listing expired.');
@@ -466,9 +494,9 @@ module.exports = [
 
         if (sub === 'list') {
           const itemId = parseId(args[1]);
-          const qty = parseQty(Number(args[2]));
+          const qty = await resolveOwnedQty(message.guild.id, message.author.id, itemId, args[2], null);
           const price = Number(args[3]);
-          if (!itemId || !qty || !Number.isInteger(price) || price <= 0) return message.reply('Usage: `!market list <item> <qty> <priceEach>`');
+          if (!itemId || !qty || !Number.isInteger(price) || price <= 0) return message.reply('Usage: `!market list <item> <qty|all> <priceEach>`');
 
           const item = getItem(itemId);
           try {
@@ -485,8 +513,9 @@ module.exports = [
 
         if (sub === 'buy') {
           const id = Number(args[1]);
-          const qty = args[2] ? Number(args[2]) : null;
-          if (!Number.isInteger(id) || id <= 0) return message.reply('Usage: `!market buy <id> [qty]`');
+          const qty = isAllQty(args[2]) || args[2] == null ? null : parseQty(args[2]);
+          if (!Number.isInteger(id) || id <= 0) return message.reply('Usage: `!market buy <id> [qty|all]`');
+          if (args[2] != null && !isAllQty(args[2]) && !qty) return message.reply('Invalid quantity.');
 
           const out = await market.buyListing(message.guild.id, message.author.id, id, qty);
           if (!out) return message.reply('❌ Listing not found or not active.');
@@ -538,14 +567,14 @@ module.exports = [
             .setDescription('Add item to your offer (escrowed)')
             .addStringOption(o => o.setName('id').setDescription('Trade id').setRequired(true))
             .addStringOption(o => o.setName('item').setDescription('Item id').setRequired(true))
-            .addIntegerOption(o => o.setName('qty').setDescription('Quantity').setRequired(true))
+            .addStringOption(o => o.setName('qty').setDescription('Quantity, or all').setRequired(true))
         )
         .addSubcommand(sc =>
           sc.setName('remove')
             .setDescription('Remove item from your offer (returned)')
             .addStringOption(o => o.setName('id').setDescription('Trade id').setRequired(true))
             .addStringOption(o => o.setName('item').setDescription('Item id').setRequired(true))
-            .addIntegerOption(o => o.setName('qty').setDescription('Quantity').setRequired(true))
+            .addStringOption(o => o.setName('qty').setDescription('Quantity, or all').setRequired(true))
         )
         .addSubcommand(sc =>
           sc.setName('confirm')
@@ -579,7 +608,7 @@ module.exports = [
         if (sub === 'add') {
           const id = interaction.options.getString('id');
           const itemId = parseId(interaction.options.getString('item'));
-          const qty = parseQty(interaction.options.getInteger('qty'));
+          const qty = await resolveOwnedQty(interaction.guildId, interaction.user.id, itemId, interaction.options.getString('qty'), null);
           if (!itemId || !qty) return interaction.reply('Invalid item or quantity.');
           const out = await trades.addTradeItem(interaction.guildId, id, interaction.user.id, itemId, qty);
           if (!out) return interaction.reply('❌ Trade not found.');
@@ -593,7 +622,8 @@ module.exports = [
         if (sub === 'remove') {
           const id = interaction.options.getString('id');
           const itemId = parseId(interaction.options.getString('item'));
-          const qty = parseQty(interaction.options.getInteger('qty'));
+          const qtyRaw = interaction.options.getString('qty');
+          const qty = isAllQty(qtyRaw) ? await trades.getTradeOfferQty(interaction.guildId, id, interaction.user.id, itemId) : parseQty(qtyRaw);
           if (!itemId || !qty) return interaction.reply('Invalid item or quantity.');
           const out = await trades.removeTradeItem(interaction.guildId, id, interaction.user.id, itemId, qty);
           if (!out) return interaction.reply('❌ Trade not found.');

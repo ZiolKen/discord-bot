@@ -32,6 +32,30 @@ function safeError(target, msg) {
   return safeReply(target, payload);
 }
 
+function isAllArg(raw) {
+  return ['all', 'max'].includes(String(raw ?? '').trim().toLowerCase());
+}
+
+function lastBetArg(args) {
+  for (let i = args.length - 1; i >= 0; i--) {
+    const s = String(args[i] || '').trim();
+    if (isAllArg(s)) return s;
+    if (/^\d+$/.test(s)) return parseInt(s, 10);
+  }
+  return null;
+}
+
+async function normalizeUserBet(guildId, userId, raw, options = {}) {
+  if (isAllArg(raw)) {
+    const row = await ensureRow(guildId, userId);
+    const bet = Math.floor(Number(row.coins || 0));
+    const min = Number.isInteger(options.min) ? options.min : 1;
+    if (bet < min) return { ok: false, error: 'You do not have any coins to bet.' };
+    return { ok: true, bet };
+  }
+  return normalizeBet(raw, options);
+}
+
 function rollSymbols() {
   const symbols = ['🍒','🍋','🍉','⭐','💎'];
   return [symbols[randInt(0, 4)], symbols[randInt(0, 4)], symbols[randInt(0, 4)]];
@@ -310,9 +334,9 @@ module.exports = [
       data: new SlashCommandBuilder()
         .setName('gamble')
         .setDescription('50/50 coin gamble (house fee 5%)')
-        .addIntegerOption(o => o.setName('amount').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('amount').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
-        const nb = normalizeBet(interaction.options.getInteger('amount'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('amount'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -335,8 +359,8 @@ module.exports = [
     },
     prefix: {
       async run(message, args) {
-        const raw = args[0] === undefined ? null : parseInt(args[0], 10);
-        const nb = normalizeBet(raw, {});
+        const raw = args[0] === undefined ? null : args[0];
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, raw, {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -368,9 +392,9 @@ module.exports = [
       data: new SlashCommandBuilder()
         .setName('slots')
         .setDescription('Play slots (house fee 5%)')
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -397,8 +421,8 @@ module.exports = [
     },
     prefix: {
       async run(message, args) {
-        const raw = args[0] === undefined ? null : parseInt(args[0], 10);
-        const nb = normalizeBet(raw, {});
+        const raw = args[0] === undefined ? null : args[0];
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, raw, {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -445,12 +469,12 @@ module.exports = [
           { name: 'number', value: 'number' }
         ))
         .addIntegerOption(o => o.setName('number').setDescription('Pick 0-36 (only for type=number)').setRequired(false))
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
         const type = interaction.options.getString('type');
         const pickNumber = interaction.options.getInteger('number');
 
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -491,8 +515,8 @@ module.exports = [
       async run(message, args) {
         const type = String(args[0] || '').toLowerCase();
         const rawBet = args[args.length - 1];
-        const betMaybe = /^\d+$/.test(String(rawBet || '')) ? parseInt(rawBet, 10) : null;
-        const nb = normalizeBet(betMaybe, {});
+        const betMaybe = isAllArg(rawBet) ? rawBet : /^\d+$/.test(String(rawBet || '')) ? parseInt(rawBet, 10) : null;
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, betMaybe, {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -544,9 +568,9 @@ module.exports = [
       data: new SlashCommandBuilder()
         .setName('wheel')
         .setDescription('Spin the wheel (house fee 5%)')
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -575,8 +599,8 @@ module.exports = [
     },
     prefix: {
       async run(message, args) {
-        const raw = args[0] === undefined ? null : parseInt(args[0], 10);
-        const nb = normalizeBet(raw, {});
+        const raw = args[0] === undefined ? null : args[0];
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, raw, {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -619,10 +643,10 @@ module.exports = [
           { name: 'mid', value: 'mid' },
           { name: 'high', value: 'high' }
         ))
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
         const risk = interaction.options.getString('risk') || 'mid';
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -661,8 +685,8 @@ module.exports = [
     prefix: {
       async run(message, args) {
         const risk = ['low','mid','high'].includes(String(args[0] || '').toLowerCase()) ? String(args[0]).toLowerCase() : 'mid';
-        const raw = lastIntArg(args);
-        const nb = normalizeBet(raw, {});
+        const raw = lastBetArg(args);
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, raw, {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -710,14 +734,14 @@ module.exports = [
         .setName('keno')
         .setDescription('Play keno (house fee 5%)')
         .addStringOption(o => o.setName('picks').setDescription('Numbers 1-40, e.g. "1,2,3"').setRequired(true))
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
         const pickStr = interaction.options.getString('picks');
         const parsed = kenoParsePick(pickStr);
         if (!parsed.ok) return safeError(interaction, parsed.error);
         const picks = parsed.nums;
 
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -750,8 +774,8 @@ module.exports = [
         if (!parsed.ok) return safeError(message, parsed.error);
         const picks = parsed.nums;
 
-        const raw = args[1] === undefined ? null : parseInt(args[1], 10);
-        const nb = normalizeBet(raw, {});
+        const raw = args[1] === undefined ? null : args[1];
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, raw, {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -787,9 +811,9 @@ module.exports = [
       data: new SlashCommandBuilder()
         .setName('scratch')
         .setDescription('Scratch card (house fee 5%)')
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -818,8 +842,8 @@ module.exports = [
     },
     prefix: {
       async run(message, args) {
-        const raw = args[0] === undefined ? null : parseInt(args[0], 10);
-        const nb = normalizeBet(raw, {});
+        const raw = args[0] === undefined ? null : args[0];
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, raw, {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -858,13 +882,13 @@ module.exports = [
         .setName('lottery')
         .setDescription('2-digit lottery (house fee 5%)')
         .addIntegerOption(o => o.setName('pick').setDescription('Pick 0-99').setRequired(false))
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
         const pick = interaction.options.getInteger('pick');
         const chosen = (pick === null || pick === undefined) ? randInt(0, 99) : pick;
         if (!Number.isInteger(chosen) || chosen < 0 || chosen > 99) return safeError(interaction, 'Pick must be 0-99.');
 
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -894,12 +918,13 @@ module.exports = [
     prefix: {
       async run(message, args) {
         const pickRaw = args[0];
-        const betRaw = args[1];
+        const pickIsAll = isAllArg(pickRaw);
+        const betRaw = pickIsAll ? pickRaw : args[1];
 
-        const chosen = pickRaw === undefined ? randInt(0, 99) : parseInt(pickRaw, 10);
+        const chosen = pickRaw === undefined || pickIsAll ? randInt(0, 99) : parseInt(pickRaw, 10);
         if (!Number.isInteger(chosen) || chosen < 0 || chosen > 99) return safeError(message, 'Usage: `!lottery [pick 0-99] [bet]`');
 
-        const nb = normalizeBet(betRaw === undefined ? null : parseInt(betRaw, 10), {});
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, betRaw === undefined ? null : betRaw, {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -941,11 +966,11 @@ module.exports = [
           { name: 'higher', value: 'higher' },
           { name: 'lower', value: 'lower' }
         ))
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
         const pick = interaction.options.getString('pick');
 
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -981,7 +1006,7 @@ module.exports = [
         const pick = String(args[0] || '').toLowerCase();
         if (!['higher','lower'].includes(pick)) return safeError(message, 'Usage: `!highlow higher|lower [bet]`');
 
-        const nb = normalizeBet(args[1] === undefined ? null : parseInt(args[1], 10), {});
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, args[1] === undefined ? null : args[1], {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -1023,9 +1048,9 @@ module.exports = [
       data: new SlashCommandBuilder()
         .setName('dicepoker')
         .setDescription('Dice poker (house fee 5%)')
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -1049,7 +1074,7 @@ module.exports = [
     },
     prefix: {
       async run(message, args) {
-        const nb = normalizeBet(args[0] === undefined ? null : parseInt(args[0], 10), {});
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, args[0] === undefined ? null : args[0], {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -1082,13 +1107,13 @@ module.exports = [
         .setName('crash')
         .setDescription('Crash game (house fee 5%)')
         .addNumberOption(o => o.setName('cashout').setDescription('Cashout multiplier (default 2.0)').setRequired(false))
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
         const cashoutRaw = interaction.options.getNumber('cashout');
         const cashout = cashoutRaw === null || cashoutRaw === undefined ? 2 : Number(cashoutRaw);
         if (!Number.isFinite(cashout) || cashout < 1.01 || cashout > 50) return safeError(interaction, 'Cashout must be between 1.01 and 50.');
 
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -1113,10 +1138,11 @@ module.exports = [
     },
     prefix: {
       async run(message, args) {
-        const cashout = args[0] === undefined ? 2 : Number(args[0]);
+        const firstIsAll = isAllArg(args[0]);
+        const cashout = args[0] === undefined || firstIsAll ? 2 : Number(args[0]);
         if (!Number.isFinite(cashout) || cashout < 1.01 || cashout > 50) return safeError(message, 'Usage: `!crash [cashout 1.01-50] [bet]`');
 
-        const nb = normalizeBet(args[1] === undefined ? null : parseInt(args[1], 10), {});
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, firstIsAll ? args[0] : args[1] === undefined ? null : args[1], {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -1151,12 +1177,12 @@ module.exports = [
         .setName('mines')
         .setDescription('Play mines (house fee 5%)')
         .addIntegerOption(o => o.setName('mines').setDescription('Mines count 1-12 (default 3)').setRequired(false))
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
         const minesCount = interaction.options.getInteger('mines') ?? 3;
         if (!Number.isInteger(minesCount) || minesCount < 1 || minesCount > 12) return safeError(interaction, 'Mines must be 1-12.');
 
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -1232,10 +1258,11 @@ module.exports = [
     },
     prefix: {
       async run(message, args) {
-        const minesCount = args[0] === undefined ? 3 : parseInt(args[0], 10);
+        const firstIsAll = isAllArg(args[0]);
+        const minesCount = args[0] === undefined || firstIsAll ? 3 : parseInt(args[0], 10);
         if (!Number.isInteger(minesCount) || minesCount < 1 || minesCount > 12) return safeError(message, 'Usage: `!mines [mines 1-12] [bet]`');
 
-        const nb = normalizeBet(args[1] === undefined ? null : parseInt(args[1], 10), {});
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, firstIsAll ? args[0] : args[1] === undefined ? null : args[1], {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
@@ -1320,9 +1347,9 @@ module.exports = [
       data: new SlashCommandBuilder()
         .setName('blackjack')
         .setDescription('Play blackjack (house fee 5%)')
-        .addIntegerOption(o => o.setName('bet').setDescription('Bet amount (default 1)').setRequired(false)),
+        .addStringOption(o => o.setName('bet').setDescription('Bet amount, or all (default 1)').setRequired(false)),
       async run(interaction) {
-        const nb = normalizeBet(interaction.options.getInteger('bet'), {});
+        const nb = await normalizeUserBet(interaction.guildId, interaction.user.id, interaction.options.getString('bet'), {});
         if (!nb.ok) return safeError(interaction, nb.error);
         const bet = nb.bet;
 
@@ -1427,7 +1454,7 @@ module.exports = [
     },
     prefix: {
       async run(message, args) {
-        const nb = normalizeBet(args[0] === undefined ? null : parseInt(args[0], 10), {});
+        const nb = await normalizeUserBet(message.guild.id, message.author.id, args[0] === undefined ? null : args[0], {});
         if (!nb.ok) return safeError(message, nb.error);
         const bet = nb.bet;
 
