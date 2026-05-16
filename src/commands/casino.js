@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getOrCreate, addCoins, trySpendCoins } = require('../services/economy');
 const { createSession, endSession } = require('../services/gameSessions');
-const { randInt, randFloat, normalizeBet, applyHouseFeeToProfit, payoutFromBetAndProfit, weightedPick } = require('../services/casino');
+const { randInt, randFloat, normalizeBet, applyHouseFeeToProfit, weightedPick } = require('../services/casino');
 
 async function ensureRow(guildId, userId) {
   return getOrCreate(guildId, userId);
@@ -11,6 +11,32 @@ function fmtDelta(n) {
   if (n > 0) return `+${n}`;
   if (n < 0) return `${n}`;
   return '0';
+}
+
+function getHouseFeeOwnerId() {
+  const ownerId = String(process.env.OWNER_ID || '').trim();
+  return ownerId || null;
+}
+
+function splitHouseFee(profit, feePct = 5) {
+  const grossProfit = Math.max(0, Math.floor(Number(profit) || 0));
+  const netProfit = applyHouseFeeToProfit(grossProfit, feePct);
+  return { netProfit, fee: Math.max(0, grossProfit - netProfit) };
+}
+
+async function addHouseFee(guildId, fee) {
+  const ownerId = getHouseFeeOwnerId();
+  if (!ownerId || !Number.isInteger(fee) || fee <= 0) return 0;
+  await addCoins(guildId, ownerId, fee);
+  return fee;
+}
+
+async function addPayoutWithHouseFee(guildId, userId, bet, profit, feePct = 5) {
+  const { netProfit, fee } = splitHouseFee(profit, feePct);
+  const payout = bet + netProfit;
+  if (payout > 0) await addCoins(guildId, userId, payout);
+  await addHouseFee(guildId, fee);
+  return { payout, netProfit, fee };
 }
 
 
@@ -348,9 +374,9 @@ module.exports = [
         let delta = -bet;
 
         if (win) {
-          payout = payoutFromBetAndProfit(bet, bet, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(bet, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, bet, 5);
+          payout = settled.payout;
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -372,9 +398,9 @@ module.exports = [
         let delta = -bet;
 
         if (win) {
-          payout = payoutFromBetAndProfit(bet, bet, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(bet, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, bet, 5);
+          payout = settled.payout;
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -410,9 +436,8 @@ module.exports = [
         let delta = -bet;
         if (mult > 0) {
           const profit = bet * mult;
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -438,9 +463,8 @@ module.exports = [
         let delta = -bet;
         if (mult > 0) {
           const profit = bet * mult;
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -501,9 +525,8 @@ module.exports = [
 
         let delta = -bet;
         if (win) {
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -547,9 +570,8 @@ module.exports = [
 
         let delta = -bet;
         if (win) {
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -588,9 +610,8 @@ module.exports = [
         let delta = -bet;
         if (spin.m > 0) {
           const profit = bet * (spin.m - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -618,9 +639,8 @@ module.exports = [
         let delta = -bet;
         if (spin.m > 0) {
           const profit = bet * (spin.m - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -673,9 +693,8 @@ module.exports = [
 
         if (mult > 0) {
           const profit = bet * (mult - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -713,9 +732,8 @@ module.exports = [
 
         if (mult > 0) {
           const profit = bet * (mult - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -757,9 +775,8 @@ module.exports = [
         if (mult > 0) {
           const payout = bet * mult;
           const profit = payout - bet;
-          const finalPayout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, finalPayout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -791,9 +808,8 @@ module.exports = [
         if (mult > 0) {
           const payout = bet * mult;
           const profit = payout - bet;
-          const finalPayout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, finalPayout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -831,9 +847,8 @@ module.exports = [
         let delta = -bet;
         if (tier.mult > 0) {
           const profit = bet * (tier.mult - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -861,9 +876,8 @@ module.exports = [
         let delta = -bet;
         if (tier.mult > 0) {
           const profit = bet * (tier.mult - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -905,9 +919,8 @@ module.exports = [
         let delta = -bet;
         if (mult > 0) {
           const profit = bet * (mult - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -941,9 +954,8 @@ module.exports = [
         let delta = -bet;
         if (mult > 0) {
           const profit = bet * (mult - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -989,9 +1001,8 @@ module.exports = [
         let delta = -bet;
         if (outcome === 'win') {
           const profit = bet;
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         } else if (outcome === 'push') {
           await addCoins(interaction.guildId, interaction.user.id, bet);
           delta = 0;
@@ -1025,9 +1036,8 @@ module.exports = [
         let delta = -bet;
         if (outcome === 'win') {
           const profit = bet;
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         } else if (outcome === 'push') {
           await addCoins(message.guild.id, message.author.id, bet);
           delta = 0;
@@ -1063,9 +1073,8 @@ module.exports = [
         let delta = -bet;
         if (hand.mult > 0) {
           const profit = bet * (hand.mult - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -1087,9 +1096,8 @@ module.exports = [
         let delta = -bet;
         if (hand.mult > 0) {
           const profit = bet * (hand.mult - 1);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -1127,9 +1135,8 @@ module.exports = [
         if (win) {
           const grossPayout = Math.floor(bet * cashout);
           const profit = Math.max(0, grossPayout - bet);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(interaction.guildId, interaction.user.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(interaction.guildId, interaction.user.id);
@@ -1156,9 +1163,8 @@ module.exports = [
         if (win) {
           const grossPayout = Math.floor(bet * cashout);
           const profit = Math.max(0, grossPayout - bet);
-          const payout = payoutFromBetAndProfit(bet, profit, 5);
-          await addCoins(message.guild.id, message.author.id, payout);
-          delta = applyHouseFeeToProfit(profit, 5);
+          const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+          delta = settled.netProfit;
         }
 
         const updated = await ensureRow(message.guild.id, message.author.id);
@@ -1228,9 +1234,8 @@ module.exports = [
               const safe = n - state.minesCount;
               const mult = minesMultiplier(n, safe, state.safeRevealed);
               const grossProfit = Math.floor(state.bet * (mult - 1));
-              const netProfit = applyHouseFeeToProfit(grossProfit, 5);
-              const payout = state.bet + netProfit;
-              return finish(`✅ Cashout x${mult.toFixed(2)} | Δ +${netProfit}`, payout);
+              const settled = await addPayoutWithHouseFee(btn.guildId, s.ownerId, state.bet, grossProfit, 5);
+              return finish(`✅ Cashout x${mult.toFixed(2)} | Δ +${settled.netProfit}`, 0);
             }
 
             if (!action.startsWith('t')) return btn.deferUpdate().catch(() => {});
@@ -1308,9 +1313,8 @@ module.exports = [
               const safe = n - state.minesCount;
               const mult = minesMultiplier(n, safe, state.safeRevealed);
               const grossProfit = Math.floor(state.bet * (mult - 1));
-              const netProfit = applyHouseFeeToProfit(grossProfit, 5);
-              const payout = state.bet + netProfit;
-              return finish(`✅ Cashout x${mult.toFixed(2)} | Δ +${netProfit}`, payout);
+              const settled = await addPayoutWithHouseFee(btn.guildId, s.ownerId, state.bet, grossProfit, 5);
+              return finish(`✅ Cashout x${mult.toFixed(2)} | Δ +${settled.netProfit}`, 0);
             }
 
             if (!action.startsWith('t')) return btn.deferUpdate().catch(() => {});
@@ -1377,9 +1381,9 @@ module.exports = [
 
           if (playerBJ && !dealerBJ) {
             const profit = Math.floor(bet * 1.5);
-            const netProfit = applyHouseFeeToProfit(profit, 5);
-            payout = bet + netProfit;
-            resultText = `🟣 Blackjack! (Δ +${netProfit})`;
+            const settled = await addPayoutWithHouseFee(interaction.guildId, interaction.user.id, bet, profit, 5);
+            payout = 0;
+            resultText = `🟣 Blackjack! (Δ +${settled.netProfit})`;
           } else if (!playerBJ && dealerBJ) {
             payout = 0;
             resultText = `❌ Dealer blackjack (Δ -${bet})`;
@@ -1407,9 +1411,9 @@ module.exports = [
               let payout = st.bet;
 
               if (outcome === 'win') {
-                const netProfit = applyHouseFeeToProfit(st.bet, 5);
-                payout = st.bet + netProfit;
-                resultText = `✅ Win (Δ +${netProfit})`;
+                const settled = await addPayoutWithHouseFee(btn.guildId, s.ownerId, st.bet, st.bet, 5);
+                payout = 0;
+                resultText = `✅ Win (Δ +${settled.netProfit})`;
               }
               if (outcome === 'lose') {
                 payout = 0;
@@ -1482,9 +1486,9 @@ module.exports = [
 
           if (playerBJ && !dealerBJ) {
             const profit = Math.floor(bet * 1.5);
-            const netProfit = applyHouseFeeToProfit(profit, 5);
-            payout = bet + netProfit;
-            resultText = `🟣 Blackjack! (Δ +${netProfit})`;
+            const settled = await addPayoutWithHouseFee(message.guild.id, message.author.id, bet, profit, 5);
+            payout = 0;
+            resultText = `🟣 Blackjack! (Δ +${settled.netProfit})`;
           } else if (!playerBJ && dealerBJ) {
             payout = 0;
             resultText = `❌ Dealer blackjack (Δ -${bet})`;
@@ -1512,9 +1516,9 @@ module.exports = [
               let payout = st.bet;
 
               if (outcome === 'win') {
-                const netProfit = applyHouseFeeToProfit(st.bet, 5);
-                payout = st.bet + netProfit;
-                resultText = `✅ Win (Δ +${netProfit})`;
+                const settled = await addPayoutWithHouseFee(btn.guildId, s.ownerId, st.bet, st.bet, 5);
+                payout = 0;
+                resultText = `✅ Win (Δ +${settled.netProfit})`;
               }
               if (outcome === 'lose') {
                 payout = 0;
